@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Key Үүсгэгч — Миний Санхүү</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#f0efe9;--sur:#fff;--sur2:#f7f6f2;--bd:#e2dfd6;
+  --tx:#1c1a17;--tx2:#6b6560;--tx3:#a09b93;
+  --bl:#2563eb;--bl2:#1d4ed8;--bl-bg:#eff4ff;--bl-bd:#bfdbfe;
+  --gn:#16a34a;--gn-bg:#f0fdf4;--gn-bd:#bbf7d0;
+  --rd:#dc2626;--rd-bg:#fef2f2;--rd-bd:#fecaca;
+  --am:#d97706;--am-bg:#fffbeb;--am-bd:#fde68a;
+  --r:10px;--r2:14px;
+}
+body{background:var(--bg);font-family:'Sora',sans-serif;font-size:14px;color:var(--tx);min-height:100vh;padding:24px 16px;}
+.wrap{max-width:700px;margin:0 auto;}
+.header{background:linear-gradient(135deg,#1e3a5f,#2563eb);border-radius:var(--r2);padding:22px 24px;margin-bottom:20px;color:#fff;}
+.header h1{font-size:20px;font-weight:700;margin-bottom:4px;}
+.header p{font-size:12px;opacity:.7;}
+.card{background:var(--sur);border:1.5px solid var(--bd);border-radius:var(--r2);padding:20px 22px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.05);}
+.card-title{font-size:13px;font-weight:700;color:var(--tx);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;}
+.fg{display:flex;flex-direction:column;gap:5px;flex:1;min-width:120px;}
+.lbl{font-size:11px;font-weight:600;color:var(--tx3);letter-spacing:.05em;text-transform:uppercase;}
+input[type=number]{background:var(--sur2);border:1.5px solid var(--bd);border-radius:var(--r);color:var(--tx);padding:10px 12px;font-size:14px;font-family:'Sora',sans-serif;outline:none;width:100%;}
+input[type=number]:focus{border-color:var(--bl);}
+.btn{padding:11px 22px;border-radius:var(--r);border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:'Sora',sans-serif;transition:all .15s;white-space:nowrap;}
+.btn-pri{background:var(--bl);color:#fff;}
+.btn-pri:hover{background:var(--bl2);}
+.btn-pri:disabled{opacity:.5;cursor:not-allowed;}
+.btn-sec{background:var(--sur2);color:var(--tx2);border:1.5px solid var(--bd);}
+.btn-sec:hover{border-color:var(--bl);color:var(--bl);}
+.btn-sm{padding:6px 12px;font-size:11px;border-radius:6px;border:none;cursor:pointer;font-family:'Sora',sans-serif;font-weight:600;}
+.btn-copy{background:var(--bl-bg);color:var(--bl);}
+.btn-copy:hover{background:var(--bl);color:#fff;}
+.btn-del{background:var(--rd-bg);color:var(--rd);}
+.btn-del:hover{background:var(--rd);color:#fff;}
+.status{padding:10px 14px;border-radius:8px;font-size:12px;margin-top:12px;display:none;}
+.status.ok{background:var(--gn-bg);border:1px solid var(--gn-bd);color:var(--gn);}
+.status.err{background:var(--rd-bg);border:1px solid var(--rd-bd);color:var(--rd);}
+.status.loading{background:var(--bl-bg);border:1px solid var(--bl-bd);color:var(--bl);}
+.keys-table{width:100%;border-collapse:collapse;font-size:13px;}
+.keys-table th{background:var(--sur2);padding:9px 12px;text-align:left;font-size:11px;font-weight:600;color:var(--tx3);letter-spacing:.04em;text-transform:uppercase;border-bottom:2px solid var(--bd);}
+.keys-table td{padding:10px 12px;border-bottom:1px solid var(--bd);vertical-align:middle;}
+.keys-table tr:last-child td{border-bottom:none;}
+.keys-table tr:hover td{background:var(--sur2);}
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;}
+.badge-new{background:var(--gn-bg);color:var(--gn);border:1px solid var(--gn-bd);}
+.badge-used{background:var(--rd-bg);color:var(--rd);border:1px solid var(--rd-bd);}
+.key-text{font-family:monospace;font-size:13px;font-weight:700;letter-spacing:.1em;color:var(--bl);}
+.empty{text-align:center;padding:32px;color:var(--tx3);font-size:13px;}
+.actions{display:flex;gap:6px;}
+.divider{height:1px;background:var(--bd);margin:16px 0;}
+.info{background:var(--am-bg);border:1px solid var(--am-bd);border-radius:8px;padding:10px 13px;font-size:12px;color:var(--am);margin-bottom:14px;line-height:1.7;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <h1>🔑 Key Үүсгэгч</h1>
+    <p>Миний Санхүү — Лицензийн удирдлага</p>
+  </div>
+
+  <!-- Нэвтрэх -->
+  <div class="card" id="login-card">
+    <div class="card-title">🔐 Администратор нэвтрэх</div>
+    <div class="info">Энэ хэрэгсэл зөвхөн танд зориулагдсан. Нууц үгээ хэнд ч өгөхгүй байна уу.</div>
+    <div class="row">
+      <div class="fg">
+        <div class="lbl">Нууц үг</div>
+        <input type="password" id="admin-pw" placeholder="Нууц үг оруулна уу" onkeydown="if(event.key==='Enter')adminLogin()">
+      </div>
+      <button class="btn btn-pri" onclick="adminLogin()">Нэвтрэх</button>
+    </div>
+    <div class="status" id="login-status"></div>
+  </div>
+
+  <!-- Key үүсгэгч -->
+  <div id="main-panel" style="display:none">
+
+    <div class="card">
+      <div class="card-title">➕ Шинэ Key үүсгэх</div>
+      <div class="row">
+        <div class="fg">
+          <div class="lbl">Хэдэн key үүсгэх вэ?</div>
+          <input type="number" id="key-count" value="1" min="1" max="50">
+        </div>
+        <button class="btn btn-pri" id="gen-btn" onclick="genKeys()">⚡ Үүсгэх</button>
+      </div>
+      <div class="status" id="gen-status"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📋 Бүх key-үүд <span id="key-count-badge" style="font-size:11px;font-weight:400;color:var(--tx3);margin-left:4px"></span>
+        <button class="btn btn-sec" style="margin-left:auto;padding:6px 12px;font-size:11px" onclick="loadKeys()">🔄 Шинэчлэх</button>
+      </div>
+      <div id="keys-list"><div class="empty">Ачааллаж байна...</div></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const DB_URL = 'https://finance-tracker-ca269-default-rtdb.firebaseio.com';
+const ADMIN_PW_HASH = ''; // Доор тохируулна
+let ADMIN_TOKEN = '';
+let fbApp2, fbDb2;
+
+// Firebase init
+try {
+  fbApp2 = firebase.initializeApp({databaseURL: DB_URL}, 'admin');
+  fbDb2 = firebase.database(fbApp2);
+} catch(e) {
+  try { fbApp2 = firebase.app('admin'); fbDb2 = firebase.database(fbApp2); } catch(e2) {}
+}
+
+// Admin нэвтрэх — нууц үг localStorage-д хадгалах
+function adminLogin(){
+  const pw = document.getElementById('admin-pw').value;
+  if(!pw){showStatus('login-status','Нууц үг оруулна уу','err');return;}
+  // Энгийн hash шалгалт
+  const expected = localStorage.getItem('admin_pw');
+  if(!expected){
+    // Эхний удаа — нууц үг тохируулах
+    localStorage.setItem('admin_pw', pw);
+    ADMIN_TOKEN = pw;
+    showStatus('login-status','✅ Нууц үг тохируулагдлаа!','ok');
+    setTimeout(()=>{document.getElementById('login-card').style.display='none';document.getElementById('main-panel').style.display='block';loadKeys();},800);
+    return;
+  }
+  if(pw !== expected){showStatus('login-status','Нууц үг буруу байна','err');return;}
+  ADMIN_TOKEN = pw;
+  document.getElementById('login-card').style.display='none';
+  document.getElementById('main-panel').style.display='block';
+  loadKeys();
+}
+
+// Random key үүсгэх: XXXX-XXXX-XXXX
+function makeKey(){
+  const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let k='';
+  for(let i=0;i<12;i++){
+    if(i===4||i===8)k+='-';
+    k+=chars[Math.floor(Math.random()*chars.length)];
+  }
+  return k;
+}
+
+async function genKeys(){
+  const cnt = parseInt(document.getElementById('key-count').value)||1;
+  if(cnt<1||cnt>50){showStatus('gen-status','1-50 хооронд байх ёстой','err');return;}
+  const btn = document.getElementById('gen-btn');
+  btn.disabled=true;
+  showStatus('gen-status','Үүсгэж байна...','loading');
+
+  const updates={};
+  const newKeys=[];
+  for(let i=0;i<cnt;i++){
+    const raw = makeKey().replace(/-/g,'');
+    updates['keys/'+raw]={used:false,createdAt:new Date().toISOString().slice(0,10)};
+    newKeys.push(raw.slice(0,4)+'-'+raw.slice(4,8)+'-'+raw.slice(8,12));
+  }
+
+  try {
+    await fbDb2.ref('/').update(updates);
+    showStatus('gen-status','✅ '+cnt+' key амжилттай үүслээ!','ok');
+    loadKeys();
+  } catch(e) {
+    showStatus('gen-status','Алдаа: '+e.message,'err');
+  }
+  btn.disabled=false;
+}
+
+async function loadKeys(){
+  const el = document.getElementById('keys-list');
+  el.innerHTML='<div class="empty">Ачааллаж байна...</div>';
+  try {
+    const snap = await fbDb2.ref('keys').once('value');
+    const data = snap.val();
+    if(!data){el.innerHTML='<div class="empty">Key байхгүй байна</div>';document.getElementById('key-count-badge').textContent='';return;}
+
+    const entries = Object.entries(data).sort((a,b)=>{
+      // Ашиглагдаагүй эхэнд
+      if(!a[1].used && b[1].used) return -1;
+      if(a[1].used && !b[1].used) return 1;
+      return (b[1].createdAt||'').localeCompare(a[1].createdAt||'');
+    });
+
+    const total = entries.length;
+    const used = entries.filter(e=>e[1].used).length;
+    const free = total-used;
+    document.getElementById('key-count-badge').textContent=
+      '(Нийт: '+total+' · Үлдсэн: '+free+' · Ашиглагдсан: '+used+')';
+
+    el.innerHTML='<table class="keys-table">'+
+      '<thead><tr><th>Лицензийн key</th><th>Огноо</th><th>Төлөв</th><th>Ашигласан</th><th></th></tr></thead>'+
+      '<tbody>'+
+      entries.map(([raw,d])=>{
+        const fmt=raw.slice(0,4)+'-'+raw.slice(4,8)+'-'+raw.slice(8,12);
+        const usedAt=d.usedAt?d.usedAt.slice(0,10):'—';
+        return '<tr>'+
+          '<td><span class="key-text">'+fmt+'</span></td>'+
+          '<td style="color:var(--tx3);font-size:12px">'+(d.createdAt||'—')+'</td>'+
+          '<td><span class="badge '+(d.used?'badge-used':'badge-new')+'">'+(d.used?'Ашиглагдсан':'Шинэ')+'</span></td>'+
+          '<td style="color:var(--tx3);font-size:12px">'+usedAt+'</td>'+
+          '<td><div class="actions">'+
+            '<button class="btn-sm btn-copy" data-key="'+fmt+'" onclick="copyKey(this)">Хуулах</button>'+
+            (!d.used?'<button class="btn-sm btn-del" data-raw="'+raw+'" onclick="delKey(this)">Устгах</button>':'')+
+          '</div></td>'+
+        '</tr>';
+      }).join('')+
+      '</tbody></table>';
+  } catch(e) {
+    el.innerHTML='<div class="empty" style="color:var(--rd)">Алдаа: '+e.message+'</div>';
+  }
+}
+
+function copyKey(btn){
+  const key = btn.getAttribute('data-key');
+  navigator.clipboard.writeText(key).then(()=>{
+    const orig = btn.textContent;
+    btn.textContent='✅ Хуулагдлаа';
+    btn.style.background='var(--gn)';btn.style.color='#fff';
+    setTimeout(()=>{btn.textContent=orig;btn.style.background='';btn.style.color='';},1500);
+  });
+}
+
+async function delKey(btn){
+  const raw = btn.getAttribute('data-raw');
+  if(!confirm('Энэ key-г устгах уу?'))return;
+  await fbDb2.ref('keys/'+raw).remove();
+  loadKeys();
+}
+
+function showStatus(id,msg,type){
+  const el=document.getElementById(id);
+  el.textContent=msg;el.className='status '+type;el.style.display='block';
+  if(type==='ok')setTimeout(()=>el.style.display='none',3000);
+}
+
+// Автоматаар нэвтрэх хэрэглэгч байвал
+window.onload=()=>{
+  const saved = localStorage.getItem('admin_pw');
+  if(saved){
+    document.getElementById('admin-pw').value=saved;
+  }
+};
+</script>
+</body>
+</html>
