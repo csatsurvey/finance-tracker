@@ -3991,10 +3991,10 @@ function doRefresh(){
   }
 }
 function showChangelog(){
-  const seen=localStorage.getItem('changelog_seen')||'0';
   const latest=CHANGELOG[0].ver;
-  if(seen===latest)return;
-  localStorage.setItem('changelog_seen',latest);
+  const key='cl_seen_'+latest; // version бүрт тусдаа key
+  if(localStorage.getItem(key))return;
+  localStorage.setItem(key,'1');
   const c=CHANGELOG[0];
   const el=document.createElement('div');
   el.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
