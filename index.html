@@ -3828,7 +3828,7 @@ function renderMgrRecurring(){
         '<div style="font-size:18px">'+(r.type==='income'?'💰':'💸')+'</div>'+
         '<div class="aei-body">'+
           '<div class="aei-name">'+r.name+'</div>'+
-          '<div class="aei-sub">'+fmt(r.amt)+'₮ · Сар бүр · '+(r.account==='cash'?'💵 Бэлэн':'💳 Карт')+'</div>'+
+          '<div class="aei-sub">'+fmt(r.amt)+'₮ · Сар бүр · '+(r.account==='cash'?'💵 Бэлэн':'💳 Карт')+(r.cat?' · '+r.cat:'')+'</div>'+
         '</div>'+
         '<div class="aei-acts">'+
           '<button class="btn-pri" style="padding:6px 12px;font-size:11px" data-ri="'+i+'" onclick="applyRecurring(this.dataset.ri)">+ Нэмэх</button>'+
@@ -3856,36 +3856,66 @@ function renderMgrRecurring(){
           '<option value="cash">💵 Бэлэн</option>'+
         '</select></div>'+
     '</div>'+
+    '<div class="f-row g1">'+
+      '<div class="f-grp"><div class="f-lbl">Ангилал</div>'+
+        '<select class="f-sel" id="rec-cat"></select>'+
+      '</div>'+
+    '</div>'+
     '<div class="m-acts" style="margin-top:8px">'+
       '<button class="btn-pri" onclick="saveRecurring()">Хадгалах</button>'+
     '</div>'+
   '</div>';
   el.innerHTML=h;
+  // rec-type change listener
+  const recTypeEl=document.getElementById('rec-type');
+  if(recTypeEl)recTypeEl.addEventListener('change',renderRecCatOpts);
+  renderRecCatOpts();
 }
 
+function renderRecCatOpts(){
+  const type=(document.getElementById('rec-type')||{}).value||'income';
+  const sel=document.getElementById('rec-cat');
+  if(!sel)return;
+  const cats=CATS[type]||[];
+  let opts='<option value="">— Ангилалгүй —</option>';
+  cats.forEach(p=>{
+    opts+='<option value="'+p.name+'">'+p.name+'</option>';
+    (p.subs||[]).forEach(s=>{
+      opts+='<option value="'+p.name+'/'+s+'">　└ '+s+'</option>';
+    });
+  });
+  sel.innerHTML=opts;
+}
 function saveRecurring(){
   const name=document.getElementById('rec-name').value.trim();
   const amt=pAmt(document.getElementById('rec-amt').value||'0');
   const type=document.getElementById('rec-type').value;
   const account=document.getElementById('rec-account').value;
+  const cat=(document.getElementById('rec-cat')||{}).value||'';
   if(!name){toast('Нэр оруулна уу');return;}
   if(amt<=0){toast('Дүн оруулна уу');return;}
   if(!ACCS.recurring)ACCS.recurring=[];
-  ACCS.recurring.push({id:uid(),name,amt,type,account,createdAt:nowDate()});
+  ACCS.recurring.push({id:uid(),name,amt,type,account,cat,createdAt:nowDate()});
   sA(CU.username,ACCS);renderMgrRecurring();toast('Хадгалагдлаа');
 }
 
 function fillFromRecurring(ri){
-  // Modal-д давтагддаг бичилтийн утгыг бөглөх
   const r=(ACCS.recurring||[])[parseInt(ri)];
   if(!r)return;
   const amtEl=document.getElementById('m-amt');
   const descEl=document.getElementById('m-desc');
+  const catEl=document.getElementById('m-cat');
   if(amtEl){amtEl.value=r.amt.toLocaleString();fmtI(amtEl);}
   if(descEl&&!descEl.value)descEl.value=r.name;
-  // Данс тохируулах
   if(r.account)selAcc(r.account);
-  toast(r.name+' бөглөгдлөө — засаад нэмэх товч дарна уу');
+  // Ангилал бөглөх
+  if(r.cat&&catEl){
+    // select option-г тохируулна
+    for(let i=0;i<catEl.options.length;i++){
+      if(catEl.options[i].value===r.cat){catEl.selectedIndex=i;break;}
+    }
+  }
+  toast(r.name+' бөглөгдлөө — шалгаад нэмэх товч дарна уу');
 }
 
 function applyRecurring(ri){
@@ -3894,7 +3924,7 @@ function applyRecurring(ri){
   const id=uid();
   const date=nowDate();
   const datetime=nowDateTime();
-  TXN.unshift({id,type:r.type,amt:r.amt,date,datetime,desc:r.name,account:r.account});
+  TXN.unshift({id,type:r.type,amt:r.amt,date,datetime,desc:r.name,cat:r.cat||'',account:r.account});
   sT(CU.username,TXN);renderAll();
   toast(r.name+': '+fmt(r.amt)+'₮ нэмэгдлээ');
 }
