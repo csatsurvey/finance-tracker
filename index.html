@@ -1611,6 +1611,7 @@ function row(lbl,val,color){
 function showHT(type,el){
   const tip=document.getElementById('htip');
   if(!tip)return;
+  if(!ACCS)return;
   const bal=_htBal||calcBal();
   let html='';
 
