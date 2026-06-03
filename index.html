@@ -808,7 +808,17 @@ async function licCheck(){
     await fbDb.ref('keys/'+raw).update({devices:newDevs,used:newDevs.length>=maxDev,usedAt:new Date().toISOString()});
     localStorage.setItem('lic_key',raw);localStorage.setItem('lic_ok','1');localStorage.setItem('lic_dev',devId);
     licShowOk('✅ Амжилттай! Нэвтэрч байна...');
-    setTimeout(()=>{document.getElementById('lic-screen').classList.remove('on');document.getElementById('s-home').style.display='flex';document.getElementById('s-home').classList.add('on');renderHome();},1000);
+    setTimeout(()=>{
+      // s-home-г эхлээд нуугаад license screen хааж, дараа харуулна
+      document.getElementById('s-home').style.display='none';
+      document.getElementById('s-home').classList.remove('on');
+      document.getElementById('lic-screen').classList.remove('on');
+      setTimeout(()=>{
+        document.getElementById('s-home').style.display='flex';
+        document.getElementById('s-home').classList.add('on');
+        renderHome();
+      },50);
+    },1000);
   }catch(e){licShowErr('Алдаа: '+e.message);btn.disabled=false;btn.textContent='Нэвтрэх →';}
 }
 
@@ -1751,6 +1761,11 @@ function renderHero(bal,flow){
   // ── KPI ── (үргэлж шүүсэн хугацааны)
   document.getElementById('k-inc').textContent=fmt(flow.inc);
   document.getElementById('k-exp').textContent=fmt(flow.exp+flow.loanInt);
+  // Зарлага KPI-д tooltip: зарлага + зээлийн хүүгийн нийлбэр
+  const kexpEl=document.getElementById('k-exp');
+  if(kexpEl&&flow.loanInt>0){
+    kexpEl.title='Зарлага: '+fmt(flow.exp)+' + Зээлийн хүү: '+fmt(flow.loanInt);
+  }
   // k-sav, k-loan нь доорх хэсэгт тохируулна
   const ratio=flow.inc>0?Math.round((flow.exp+flow.loanInt)/flow.inc*100):null;
   document.getElementById('k-inc-sub').textContent=periodLbl;
@@ -3951,9 +3966,9 @@ function applyRecurring(ri){
   const today=nowDate();
   const alreadyToday=TXN.some(t=>t.desc===r.name&&t.type===r.type&&t.amt===r.amt&&(t.date||'')===today);
   if(alreadyToday){
-    if(!confirm('⚠️ "'+r.name+'" өнөөдөр аль хэдийн нэмэгдсэн байна. Дахин нэмэх үү?')){
-      _applyRecLock=false;return;
-    }
+    // confirm биш toast + return ашиглана — confirm iOS-д асуудал үүсгэдэг
+    toast('⚠️ "'+r.name+'" өнөөдөр аль хэдийн нэмэгдсэн байна!');
+    _applyRecLock=false;return;
   }
   const id=uid();
   const datetime=nowDateTime();
@@ -4170,6 +4185,21 @@ function _buildXLSX(rows,bal,flow,rng){
   const ws2=XLSX.utils.aoa_to_sheet(sumData);
   ws2['!cols']=[{wch:36},{wch:20}];
   XLSX.utils.book_append_sheet(wb,ws2,'Хураангуй');
+  const isIOS3=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isPWA3=window.navigator.standalone===true||window.matchMedia('(display-mode: standalone)').matches;
+  if(isIOS3||isPWA3){
+    // iOS/PWA-д Excel нээгдэхгүй — HTML preview
+    const rows2=getExportRows();
+    const previewHtml='<!DOCTYPE html><html lang="mn"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Excel тайлан</title><style>body{font-family:Arial,sans-serif;padding:16px;font-size:12px;}table{width:100%;border-collapse:collapse;font-size:10px;}th{background:#1e3a5f;color:#fff;padding:5px 6px;}td{padding:4px 6px;border-bottom:1px solid #ddd;word-break:break-word;}button.back{background:#1e40af;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;margin-bottom:12px;}@media(max-width:480px){th,td{font-size:9px;padding:3px 4px;}}</style></head><body>'+
+      '<button class="back" onclick="window.close()">← Буцах</button><h2>Санхүүгийн тайлан — Excel Preview</h2>'+
+      '<table><thead><tr><th>Огноо</th><th>Төрөл</th><th>Тайлбар</th><th>Ангилал</th><th>Орлого</th><th>Зарлага</th><th>Баланс</th></tr></thead><tbody>'+
+      rows2.map(r=>'<tr><td>'+(r.огноо||'')+'</td><td>'+(r.төрөл||'')+'</td><td>'+(r.тайлбар||'')+'</td><td>'+(r.ангилал||'')+'</td><td style="color:#16a34a;text-align:right">'+(r.орлого?r.орлого.toLocaleString()+'₮':'')+'</td><td style="color:#dc2626;text-align:right">'+(r.зарлага?r.зарлага.toLocaleString()+'₮':'')+'</td><td style="text-align:right;font-weight:700">'+(+(r.баланс||0)).toLocaleString()+'₮</td></tr>').join('')+
+      '</tbody></table></body></html>';
+    const w=window.open('','_blank');
+    if(w){w.document.write(previewHtml);w.document.close();}
+    else toast('Popup хориглогдсон байна');
+    closeMgr();toast('Excel preview нээгдлээ');return;
+  }
   XLSX.writeFile(wb,'finance_'+nowDate()+(rng&&rng!=='Бүгд'?'_'+rng.replace(/[~\/]/g,'-'):'')+'.xlsx');
   closeMgr();toast('Excel татагдлаа');
 }
@@ -4195,21 +4225,25 @@ function exportPDF(){
 <title>Санхүүгийн тайлан — ${CU.displayName}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:Arial,sans-serif;font-size:12px;color:#1c1a17;padding:20px;}
-h1{font-size:18px;margin-bottom:4px;}
-.meta{color:#6b6560;font-size:11px;margin-bottom:16px;}
-.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;}
+body{font-family:Arial,sans-serif;font-size:12px;color:#1c1a17;padding:12px;}
+h1{font-size:16px;margin-bottom:4px;}
+.meta{color:#6b6560;font-size:11px;margin-bottom:12px;}
+.back-btn{display:inline-block;margin-bottom:12px;padding:8px 16px;background:#1e40af;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;}
+.summary{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:16px;}
+@media(min-width:600px){.summary{grid-template-columns:repeat(4,1fr);}}
 .sum-card{border:1px solid #e2dfd6;border-radius:8px;padding:10px 12px;background:#f7f6f2;}
 .sum-lbl{font-size:10px;color:#6b6560;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;}
 .sum-val{font-size:15px;font-weight:700;}
 .gn{color:#16a34a;}.rd{color:#dc2626;}.bl{color:#2563eb;}.am{color:#d97706;}
-table{width:100%;border-collapse:collapse;font-size:11px;}
-th{background:#1e3a5f;color:#fff;padding:7px 8px;text-align:left;font-size:10px;letter-spacing:.04em;}
-td{padding:6px 8px;border-bottom:1px solid #e2dfd6;}
+table{width:100%;border-collapse:collapse;font-size:10px;}
+th{background:#1e3a5f;color:#fff;padding:5px 6px;text-align:left;font-size:9px;letter-spacing:.03em;}
+td{padding:4px 6px;border-bottom:1px solid #e2dfd6;word-break:break-word;}
 tr:nth-child(even){background:#f7f6f2;}
+@media(max-width:480px){th,td{font-size:9px;padding:3px 4px;}}
 .footer{margin-top:16px;font-size:10px;color:#a09b93;text-align:center;}
 @media print{body{padding:10px;}@page{margin:15mm;}}
 </style></head><body>
+<button class="back-btn" onclick="window.close()">← Буцах</button>
 <h1>Санхүүгийн тайлан</h1>
 <div class="meta">${CU.displayName} · ${nowDate()} · Хугацаа: ${rng}</div>
 <div class="summary">
@@ -4318,6 +4352,19 @@ function exportDOCX(){
   '<w:p><w:r><w:rPr><w:color w:val="a09b93"/></w:rPr><w:t>Миний Санхүү · '+new Date().toLocaleDateString('mn-MN')+'</w:t></w:r></w:p>'+
   '</w:body></w:wordDocument>';
 
+  const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isPWA2=window.navigator.standalone===true||window.matchMedia('(display-mode: standalone)').matches;
+  if(isIOS||isPWA2){
+    // iOS/PWA-д Word файл нээгдэхгүй тул HTML preview харуулна
+    const previewHtml='<!DOCTYPE html><html lang="mn"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Word тайлан</title><style>body{font-family:Arial,sans-serif;padding:16px;font-size:12px;}table{width:100%;border-collapse:collapse;font-size:11px;}th{background:#1e3a5f;color:#fff;padding:6px;}td{padding:5px;border-bottom:1px solid #ddd;}button.back{background:#1e40af;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;margin-bottom:12px;}</style></head><body><button class="back" onclick="window.close()">← Буцах</button><h2>Санхүүгийн тайлан — Word Preview</h2><p style="color:#666;font-size:11px;margin-bottom:12px;">iOS дээр Word файл татах боломжгүй тул preview харуулж байна.</p>'+
+      '<table><thead><tr><th>Огноо</th><th>Төрөл</th><th>Тайлбар</th><th>Ангилал</th><th>Орлого</th><th>Зарлага</th></tr></thead><tbody>'+
+      rows.map(r=>'<tr><td>'+(r.огноо||'')+'</td><td>'+(r.төрөл||'')+'</td><td>'+(r.тайлбар||'')+'</td><td>'+(r.ангилал||'')+'</td><td style="color:#16a34a">'+(r.орлого?r.орлого.toLocaleString()+'₮':'')+'</td><td style="color:#dc2626">'+(r.зарлага?r.зарлага.toLocaleString()+'₮':'')+'</td></tr>').join('')+
+      '</tbody></table></body></html>';
+    const w=window.open('','_blank');
+    if(w){w.document.write(previewHtml);w.document.close();}
+    else toast('Popup хориглогдсон байна');
+    closeMgr();toast('Word preview нээгдлээ');return;
+  }
   const blob=new Blob([xml],{type:'application/msword'});
   dlBlob(blob,'finance_'+nowDate()+(rng!=='Бүгд'?'_'+rng.replace(/[~\/]/g,'-'):'')+'.doc');
   closeMgr();toast('Word татагдлаа');
