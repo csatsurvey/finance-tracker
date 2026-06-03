@@ -1166,6 +1166,7 @@ function fbStartSync(u){
         localStorage.setItem(TK(u),JSON.stringify(fbTxn));
         TXN=fbTxn;
         renderAll();
+        if(document.visibilityState!=='hidden')toast('🔄 Бичилт шинэчлэгдлээ');
       }
     });
   }
@@ -1185,6 +1186,7 @@ function fbStartSync(u){
         localStorage.setItem(AK(u),JSON.stringify(merged));
         ACCS=merged;
         renderAll();
+        if(document.visibilityState!=='hidden')toast('🔄 Данс шинэчлэгдлээ');
       }
     });
   }
@@ -1949,9 +1951,13 @@ function renderDashboard(flow){
     if(!amt)return;
     const rawCat=t.cat||'';
     let full=rawCat||'Бусад';
-    // cat='Бусад' бол desc-ийг дэд ангилал болгох
-    if(full==='Бусад'&&t.desc&&t.desc!=='Бусад'){
-      full='Бусад/'+t.desc;
+    // cat='Бусад' эсвэл 'Others' бол desc-ийг дэд ангилал болгох
+    if((full==='Бусад'||full==='Others')&&t.desc&&t.desc!=='Бусад'&&t.desc!=='Others'){
+      full=full+'/'+t.desc;
+    }
+    // Дэд ангилал байхгүй үндсэн ангилал бол desc дэд болгох
+    if(!full.includes('/')&&t.desc&&t.desc!==full){
+      // cat байвал хэвээр, дэд ангилал нэмэхгүй
     }
     const parts=full.split('/');
     const pn=parts[0]||'Бусад';
@@ -1968,7 +1974,10 @@ function renderDashboard(flow){
   const incParents={};
   filteredTXN().forEach(t=>{
     if(t.type!=='income'&&t.type!=='saving_interest')return;
-    const full=(t.cat||'Бусад');
+    let full=t.cat||'Бусад';
+    if((full==='Бусад'||full==='Others')&&t.desc&&t.desc!==full){
+      full=full+'/'+t.desc;
+    }
     const parts=full.split('/');
     const pn=parts[0];
     const sn=parts.length>1?parts.slice(1).join('/'):null;
