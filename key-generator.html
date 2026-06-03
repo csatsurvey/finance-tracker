@@ -248,3 +248,32 @@ loadKeys();
 </script>
 </body>
 </html>
+
+<script>
+// Feedback section нэмэх
+document.querySelector('.wrap').insertAdjacentHTML('beforeend', `
+<div class="card" style="margin-top:0">
+  <h2>📢 Санал хүсэлтүүд</h2>
+  <div id="fb-list"><div style="color:#9ca3af;font-size:13px">Ачааллаж байна...</div></div>
+</div>`);
+
+async function loadFeedback(){
+  const snap=await db.ref('feedback').orderByChild('datetime').limitToLast(50).once('value');
+  const data=snap.val()||{};
+  const el=document.getElementById('fb-list');
+  const items=Object.entries(data).sort((a,b)=>(b[1].datetime||'').localeCompare(a[1].datetime||''));
+  if(!items.length){el.innerHTML='<div style="color:#9ca3af;font-size:13px">Санал хүсэлт байхгүй</div>';return;}
+  const icons={suggestion:'💡',bug:'🐛',question:'❓',other:'📝'};
+  el.innerHTML=items.map(([id,d])=>`
+    <div style="border:1.5px solid #e5e7eb;border-radius:10px;padding:12px 14px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+        <span style="font-weight:600;font-size:13px">${icons[d.type]||'📝'} ${d.type==='suggestion'?'Санал':d.type==='bug'?'Алдаа':d.type==='question'?'Асуулт':'Бусад'}</span>
+        <span style="font-size:11px;color:#9ca3af">${d.datetime||d.date||''} · v${d.ver||''}</span>
+      </div>
+      <div style="font-size:13px;margin-bottom:4px">${d.msg}</div>
+      ${d.contact?`<div style="font-size:11px;color:#6b7280">📞 ${d.contact}</div>`:''}
+      <div style="font-size:11px;color:#9ca3af">👤 ${d.user||'unknown'}</div>
+    </div>`).join('');
+}
+loadFeedback();
+</script>
