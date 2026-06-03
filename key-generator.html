@@ -9,127 +9,236 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Segoe UI',sans-serif;background:#f1f5f9;min-height:100vh;padding:20px;}
-.wrap{max-width:600px;margin:0 auto;}
+.wrap{max-width:680px;margin:0 auto;}
 .header{background:linear-gradient(135deg,#1e3a5f,#1e40af);color:#fff;border-radius:16px;padding:24px;margin-bottom:20px;}
 .header h1{font-size:22px;margin-bottom:4px;}
 .header p{font-size:13px;opacity:.7;}
 .card{background:#fff;border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.08);}
 .card h2{font-size:15px;font-weight:700;margin-bottom:14px;color:#1e3a5f;}
-.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.form-full{margin-bottom:12px;}
 label{font-size:12px;font-weight:600;color:#6b7280;display:block;margin-bottom:4px;}
-input,select{width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:14px;outline:none;}
+input,select{width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:14px;outline:none;font-family:inherit;}
 input:focus,select:focus{border-color:#1e40af;}
-.btn{padding:10px 20px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;}
-.btn-primary{background:#1e40af;color:#fff;width:100%;}
-.btn-danger{background:#dc2626;color:#fff;padding:6px 12px;font-size:12px;}
-.btn-sm{background:#f3f4f6;color:#374151;padding:5px 10px;font-size:11px;border-radius:6px;border:none;cursor:pointer;}
-.key-item{display:flex;justify-content:space-between;align-items:center;padding:12px;border:1.5px solid #e5e7eb;border-radius:8px;margin-bottom:8px;}
-.key-code{font-family:monospace;font-size:15px;font-weight:700;color:#1e40af;letter-spacing:.05em;}
-.key-meta{font-size:11px;color:#9ca3af;margin-top:2px;}
-.key-actions{display:flex;gap:6px;}
-.badge{padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;}
-.badge-ok{background:#dcfce7;color:#16a34a;}
-.badge-used{background:#fef9c3;color:#92400e;}
-.msg{padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:12px;}
+.btn{padding:10px 20px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;}
+.btn-primary{background:#1e40af;color:#fff;width:100%;margin-top:4px;}
+.btn-sm{padding:5px 10px;font-size:11px;border-radius:6px;border:1.5px solid #e5e7eb;background:#f9fafb;color:#374151;cursor:pointer;font-family:inherit;}
+.btn-danger{background:#fee2e2;color:#dc2626;border:1.5px solid #fca5a5;}
+.btn-success{background:#dcfce7;color:#16a34a;border:1.5px solid #86efac;}
+.btn-warn{background:#fef9c3;color:#92400e;border:1.5px solid #fde047;}
+.key-item{border:1.5px solid #e5e7eb;border-radius:10px;padding:14px;margin-bottom:10px;}
+.key-item.blocked{border-color:#fca5a5;background:#fff5f5;}
+.key-item.trial{border-color:#fde047;background:#fefce8;}
+.key-item.paid{border-color:#86efac;background:#f0fdf4;}
+.key-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;}
+.key-code{font-family:monospace;font-size:16px;font-weight:700;color:#1e40af;letter-spacing:.08em;}
+.key-meta{font-size:11px;color:#6b7280;margin-top:2px;line-height:1.6;}
+.key-actions{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;}
+.badge{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+.badge-paid{background:#dcfce7;color:#16a34a;}
+.badge-trial{background:#fef9c3;color:#92400e;}
+.badge-blocked{background:#fee2e2;color:#dc2626;}
+.msg{padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:12px;display:none;}
 .msg-ok{background:#dcfce7;color:#16a34a;}
 .msg-err{background:#fee2e2;color:#dc2626;}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;}
+.stat-card{background:#fff;border-radius:10px;padding:14px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.06);}
+.stat-num{font-size:24px;font-weight:700;}
+.stat-lbl{font-size:11px;color:#6b7280;margin-top:2px;}
+.filter-row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
+.filter-btn{padding:6px 14px;border-radius:20px;border:1.5px solid #e5e7eb;background:#fff;font-size:12px;cursor:pointer;font-family:inherit;}
+.filter-btn.on{background:#1e40af;color:#fff;border-color:#1e40af;}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="header">
     <h1>🔑 Лицензийн Түлхүүр Үүсгэгч</h1>
-    <p>Миний Санхүү — Админ хэсэг</p>
+    <p>Миний Санхүү — Борлуулалтын удирдлага</p>
   </div>
 
+  <!-- Статистик -->
+  <div class="stats" id="stats">
+    <div class="stat-card"><div class="stat-num" id="s-total">—</div><div class="stat-lbl">Нийт key</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:#16a34a" id="s-paid">—</div><div class="stat-lbl">Төлсөн</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:#dc2626" id="s-blocked">—</div><div class="stat-lbl">Хаагдсан</div></div>
+  </div>
+
+  <!-- Шинэ key үүсгэх -->
   <div class="card">
-    <h2>Шинэ түлхүүр үүсгэх</h2>
-    <div id="msg"></div>
-    <div class="form-row">
-      <div>
-        <label>Хэрэглэгчийн нэр</label>
-        <input id="user-name" placeholder="Болд, Халиун...">
-      </div>
-      <div>
-        <label>Тайлбар</label>
-        <input id="user-note" placeholder="Тайлбар...">
-      </div>
+    <h2>+ Шинэ түлхүүр үүсгэх</h2>
+    <div id="msg" class="msg"></div>
+    <div class="form-grid">
+      <div><label>Хэрэглэгчийн нэр *</label><input id="f-name" placeholder="Болд Баяр"></div>
+      <div><label>Утасны дугаар</label><input id="f-phone" placeholder="9911-2233" type="tel"></div>
     </div>
-    <button class="btn btn-primary" onclick="genKey()">+ Түлхүүр үүсгэх</button>
+    <div class="form-grid">
+      <div>
+        <label>Төлбөрийн статус</label>
+        <select id="f-status">
+          <option value="trial">🟡 Туршилт (7 хоног)</option>
+          <option value="paid">🟢 Төлсөн</option>
+        </select>
+      </div>
+      <div><label>Тайлбар</label><input id="f-note" placeholder="Ямар сувгаар авсан..."></div>
+    </div>
+    <button class="btn btn-primary" onclick="genKey()">🔑 Түлхүүр үүсгэх</button>
   </div>
 
+  <!-- Жагсаалт -->
   <div class="card">
     <h2>Бүх түлхүүрүүд</h2>
-    <div id="key-list"><div style="color:#9ca3af;font-size:13px">Ачааллаж байна...</div></div>
+    <div class="filter-row">
+      <button class="filter-btn on" onclick="setFilter('all',this)">Бүгд</button>
+      <button class="filter-btn" onclick="setFilter('paid',this)">🟢 Төлсөн</button>
+      <button class="filter-btn" onclick="setFilter('trial',this)">🟡 Туршилт</button>
+      <button class="filter-btn" onclick="setFilter('blocked',this)">🔴 Хаагдсан</button>
+    </div>
+    <div id="key-list"><div style="color:#9ca3af;font-size:13px;padding:12px 0">Ачааллаж байна...</div></div>
   </div>
 </div>
 
 <script>
 const FB_URL='https://finance-tracker-ca269-default-rtdb.firebaseio.com';
-let db;
+let db, allKeys={}, curFilter='all';
+
 try{
-  const app=firebase.apps.length?firebase.apps[0]:firebase.initializeApp({databaseURL:FB_URL},'admin');
+  const app=firebase.apps.length?firebase.apps[0]:firebase.initializeApp({databaseURL:FB_URL},'admin2');
   db=firebase.database(app);
 }catch(e){
-  try{db=firebase.database(firebase.app('admin'));}catch(e2){}
+  try{db=firebase.database(firebase.app('admin2'));}catch(e2){console.error(e2);}
 }
 
-function uid(){return Math.random().toString(36).slice(2,6).toUpperCase()+'-'+Math.random().toString(36).slice(2,6).toUpperCase()+'-'+Math.random().toString(36).slice(2,6).toUpperCase();}
+function uid(){
+  const s=()=>Math.random().toString(36).slice(2,6).toUpperCase();
+  return s()+'-'+s()+'-'+s();
+}
 
 function showMsg(m,ok){
   const el=document.getElementById('msg');
   el.className='msg '+(ok?'msg-ok':'msg-err');
   el.textContent=m;
-  setTimeout(()=>el.textContent='',3000);
+  el.style.display='block';
+  setTimeout(()=>{el.style.display='none';},3000);
+}
+
+function setFilter(f,btn){
+  curFilter=f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  renderKeys();
 }
 
 async function genKey(){
-  const name=document.getElementById('user-name').value.trim();
-  const note=document.getElementById('user-note').value.trim();
-  if(!name){showMsg('Хэрэглэгчийн нэр оруулна уу','');return;}
+  const name=document.getElementById('f-name').value.trim();
+  const phone=document.getElementById('f-phone').value.trim();
+  const status=document.getElementById('f-status').value;
+  const note=document.getElementById('f-note').value.trim();
+  if(!name){showMsg('Хэрэглэгчийн нэр оруулна уу');return;}
   const key=uid();
-  await db.ref('keys/'+key.replace(/-/g,'')).set({
+  const raw=key.replace(/-/g,'');
+  const trialDays=7;
+  const trialExp=new Date();
+  trialExp.setDate(trialExp.getDate()+trialDays);
+  await db.ref('keys/'+raw).set({
     createdAt:new Date().toISOString().slice(0,10),
     userName:name,
-    note:note,
+    phone:phone||'',
+    note:note||'',
+    status:status, // 'paid' | 'trial' | 'blocked'
+    trialExp:status==='trial'?trialExp.toISOString().slice(0,10):'',
     devices:[],
-    used:false
+    active:true
   });
   showMsg('✅ Түлхүүр үүслээ: '+key, true);
+  document.getElementById('f-name').value='';
+  document.getElementById('f-phone').value='';
+  document.getElementById('f-note').value='';
+  loadKeys();
+}
+
+async function setStatus(raw, status){
+  const active = status !== 'blocked';
+  await db.ref('keys/'+raw).update({status, active});
   loadKeys();
 }
 
 async function deleteKey(raw){
-  if(!confirm('Устгах уу?'))return;
+  if(!confirm('Энэ түлхүүрийг устгах уу? Буцаах боломжгүй!'))return;
   await db.ref('keys/'+raw).remove();
   loadKeys();
 }
 
-async function resetKey(raw){
-  await db.ref('keys/'+raw).update({devices:[],used:false});
-  alert('Бүх төхөөрөмж цэвэрлэгдлээ');
+async function resetDevices(raw){
+  await db.ref('keys/'+raw).update({devices:[]});
+  showMsg('Төхөөрөмжүүд цэвэрлэгдлээ', true);
   loadKeys();
 }
 
 async function loadKeys(){
-  const el=document.getElementById('key-list');
-  el.innerHTML='<div style="color:#9ca3af;font-size:13px">Ачааллаж байна...</div>';
   const snap=await db.ref('keys').once('value');
-  const data=snap.val();
-  if(!data){el.innerHTML='<div style="color:#9ca3af;font-size:13px">Түлхүүр байхгүй</div>';return;}
-  const keys=Object.entries(data).sort((a,b)=>(b[1].createdAt||'').localeCompare(a[1].createdAt||''));
-  el.innerHTML=keys.map(([raw,d])=>{
+  allKeys=snap.val()||{};
+  
+  // Туршилтын хугацаа дууссан key-г автоматаар хаах
+  const today=new Date().toISOString().slice(0,10);
+  for(const [raw,d] of Object.entries(allKeys)){
+    if(d.status==='trial' && d.trialExp && d.trialExp < today){
+      await db.ref('keys/'+raw).update({status:'blocked',active:false});
+      allKeys[raw].status='blocked';
+      allKeys[raw].active=false;
+    }
+  }
+  
+  // Статистик
+  const vals=Object.values(allKeys);
+  document.getElementById('s-total').textContent=vals.length;
+  document.getElementById('s-paid').textContent=vals.filter(d=>d.status==='paid').length;
+  document.getElementById('s-blocked').textContent=vals.filter(d=>d.status==='blocked').length;
+  
+  renderKeys();
+}
+
+function renderKeys(){
+  const el=document.getElementById('key-list');
+  const today=new Date().toISOString().slice(0,10);
+  let entries=Object.entries(allKeys).sort((a,b)=>(b[1].createdAt||'').localeCompare(a[1].createdAt||''));
+  
+  if(curFilter!=='all') entries=entries.filter(([,d])=>d.status===curFilter);
+  
+  if(!entries.length){
+    el.innerHTML='<div style="color:#9ca3af;font-size:13px;padding:12px 0">Түлхүүр байхгүй</div>';
+    return;
+  }
+  
+  el.innerHTML=entries.map(([raw,d])=>{
     const fmt=raw.match(/.{1,4}/g).join('-');
     const devCount=(d.devices||[]).length;
-    return '<div class="key-item">'+
-      '<div>'+
-        '<div class="key-code">'+fmt+'</div>'+
-        '<div class="key-meta">'+(d.userName||'')+(d.note?' · '+d.note:'')+'</div>'+
-        '<div class="key-meta">'+d.createdAt+' · '+devCount+' төхөөрөмж</div>'+
+    const cls=d.status==='paid'?'paid':d.status==='blocked'?'blocked':'trial';
+    const badge=d.status==='paid'?'<span class="badge badge-paid">✅ Төлсөн</span>':
+                 d.status==='blocked'?'<span class="badge badge-blocked">🔴 Хаагдсан</span>':
+                 '<span class="badge badge-trial">🟡 Туршилт</span>';
+    const trialInfo=d.status==='trial'&&d.trialExp?
+      (d.trialExp<today?'⚠️ Хугацаа дууссан':'⏱ Дуусах: '+d.trialExp):'';
+    return '<div class="key-item '+cls+'">'+
+      '<div class="key-top">'+
+        '<div>'+
+          '<div class="key-code">'+fmt+'</div>'+
+          '<div class="key-meta">'+
+            '👤 '+(d.userName||'—')+(d.phone?' · 📞 '+d.phone:'')+'<br>'+
+            '📅 '+d.createdAt+' · 📱 '+devCount+' төхөөрөмж'+
+            (d.note?' · '+d.note:'')+'<br>'+
+            (trialInfo?'<span style="color:#d97706">'+trialInfo+'</span>':'')
+          +'</div>'+
+        '</div>'+
+        badge+
       '</div>'+
       '<div class="key-actions">'+
-        '<button class="btn-sm" onclick="resetKey(\''+raw+'\')">Цэвэрлэх</button>'+
-        '<button class="btn btn-danger" onclick="deleteKey(\''+raw+'\')">Устгах</button>'+
+        (d.status!=='paid'?'<button class="btn-sm btn-success" onclick="setStatus(\''+raw+'\',\'paid\')">✅ Төлсөн болгох</button>':'')+
+        (d.status!=='trial'?'<button class="btn-sm btn-warn" onclick="setStatus(\''+raw+'\',\'trial\')">🟡 Туршилт</button>':'')+
+        (d.status!=='blocked'?'<button class="btn-sm btn-danger" onclick="setStatus(\''+raw+'\',\'blocked\')">🔴 Хаах</button>':
+          '<button class="btn-sm btn-success" onclick="setStatus(\''+raw+'\',\'paid\')">🔓 Нээх</button>')+
+        '<button class="btn-sm" onclick="resetDevices(\''+raw+'\')">📱 Цэвэрлэх</button>'+
+        '<button class="btn-sm btn-danger" onclick="deleteKey(\''+raw+'\')">🗑 Устгах</button>'+
       '</div>'+
     '</div>';
   }).join('');
