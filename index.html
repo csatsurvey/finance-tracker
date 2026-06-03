@@ -1476,7 +1476,11 @@ function goHome(){
   CU=null;TXN=[];ACCS=null;CATS=null;
   fbStopSync();
   document.getElementById('fab-wrap').classList.remove('on');
+  // Хэрэглэгчийн жагсаалтыг localStorage-с цэвэрлэх
+  // Дараагийн нэвтрэлтэд Firebase-аас дахин татна
+  localStorage.removeItem(UK);
   scrShow('s-home');
+  renderHome();
   _showInstallHint();
   // Firebase-аас хэрэглэгчийн жагсаалт татах
   if(initFB()){
