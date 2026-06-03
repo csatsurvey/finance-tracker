@@ -1476,9 +1476,6 @@ function goHome(){
   CU=null;TXN=[];ACCS=null;CATS=null;
   fbStopSync();
   document.getElementById('fab-wrap').classList.remove('on');
-  // Хэрэглэгчийн жагсаалтыг localStorage-с цэвэрлэх
-  // Дараагийн нэвтрэлтэд Firebase-аас дахин татна
-  localStorage.removeItem(UK);
   scrShow('s-home');
   renderHome();
   _showInstallHint();
@@ -4491,9 +4488,10 @@ window.addEventListener('DOMContentLoaded',()=>{
   }
   // License event bind
   licBindEvents();
-  licInit();
-  // URL-д token байвал invite flow эхлүүлнэ
-  checkInviteToken();
+  // URL-д token байвал invite flow эхлүүлнэ — licInit-ээс өмнө
+  checkInviteToken().then(hasToken => {
+    if (!hasToken) licInit();
+  });
 
   ['s-pin','s-setup','s-app'].forEach(id=>{
     const el=document.getElementById(id);
