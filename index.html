@@ -484,6 +484,7 @@ body{background:var(--bg);color:var(--tx);font-family:'Sora',sans-serif;font-siz
     <div class="topbar-logo">Миний <em>Санхүү</em></div>
     <div class="topbar-r">
       <div class="chip" id="app-uname"></div>
+      <button class="btn-sm" onclick="location.reload()" title="Шинэчлэх">🔄</button>
       <button class="btn-sm" onclick="goHome()">Гарах</button>
     </div>
   </div>
@@ -1255,6 +1256,7 @@ async function sha(s){const b=await crypto.subtle.digest('SHA-256',new TextEncod
 // DATE FILTER
 // ═══════════════════════════════════════════════════
 function setDf(mode,btn){
+  txnShowAll=false;
   dfMode=mode;
   document.querySelectorAll('.df-pill').forEach(b=>b.classList.remove('on'));
   if(btn)btn.classList.add('on');
@@ -2348,11 +2350,16 @@ const TM={
 
 function setTab(tab,btn){
   curTab=tab;
+  txnShowAll=false;
   document.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));
   if(btn){btn.classList.add('on');}
   else{const m={all:0,income:1,expense:2,saving:3,loan:4};const tabs=document.querySelectorAll('.tb');if(tabs[m[tab]!==undefined?m[tab]:0])tabs[m[tab]!==undefined?m[tab]:0].classList.add('on');}
   renderList();
 }
+const TXN_PAGE_SIZE=20;
+let txnShowAll=false;
+function setTxnShowAll(v){txnShowAll=v;renderList();}
+
 function renderList(){
   const el=document.getElementById('txn-list');
   const f=filteredTXN().filter(t=>{
@@ -2364,7 +2371,9 @@ function renderList(){
     return true;
   });
   if(!f.length){el.innerHTML='<div class="empty">Бичилт байхгүй</div>';return;}
-  el.innerHTML=f.map(t=>{
+  const total=f.length;
+  const visible=txnShowAll?f:f.slice(0,TXN_PAGE_SIZE);
+  el.innerHTML=visible.map(t=>{
     const m=TM[t.type]||{ico:'•',lbl:t.type,col:'var(--tx)',sign:''};
     const loanN=t.loanId?((ACCS.loans.find(l=>l.id===t.loanId)||{}).name||''):'';
     const savN=t.savingId?((ACCS.savings.find(s=>s.id===t.savingId)||{}).name||''):'';
@@ -2388,7 +2397,13 @@ function renderList(){
       '<div class="txn-r"><div class="txn-amt" style="color:'+m.col+'">'+amtDisp+'</div></div>'+
       '<button class="del-btn" data-id="'+t.id+'" onclick="delTxn(this)">🗑</button>'+
     '</div>';
-  }).join('');
+  }).join('')+
+  (total>TXN_PAGE_SIZE?
+    '<div style="text-align:center;padding:12px 0">'+
+    (txnShowAll?
+      '<button onclick="setTxnShowAll(false)" style="background:var(--sur);border:1.5px solid var(--bd);border-radius:20px;padding:8px 20px;font-size:12px;font-weight:600;color:var(--bl);cursor:pointer;font-family:Sora,sans-serif">▲ Хураах</button>':
+      '<button onclick="setTxnShowAll(true)" style="background:var(--bl);border:none;border-radius:20px;padding:8px 20px;font-size:12px;font-weight:600;color:#fff;cursor:pointer;font-family:Sora,sans-serif">Дэлгэрэнгүй харах ('+(total-TXN_PAGE_SIZE)+' бичилт нэмэлт)</button>'
+    )+'</div>':'');
 }
 
 function delTxn(btn){
@@ -3926,14 +3941,19 @@ function fillFromRecurring(ri){
   toast(r.name+' бөглөгдлөө');
 }
 
+let _applyRecLock=false;
 function applyRecurring(ri){
+  if(_applyRecLock)return;
+  _applyRecLock=true;
+  setTimeout(()=>{_applyRecLock=false;},1000);
   const r=ACCS.recurring[parseInt(ri)];
   if(!r)return;
   const today=nowDate();
-  // Өнөөдөр аль хэдийн нэмсэн эсэхийг шалга
   const alreadyToday=TXN.some(t=>t.desc===r.name&&t.type===r.type&&t.amt===r.amt&&(t.date||'')===today);
   if(alreadyToday){
-    if(!confirm('⚠️ "'+r.name+'" өнөөдөр аль хэдийн нэмэгдсэн байна. Дахин нэмэх үү?'))return;
+    if(!confirm('⚠️ "'+r.name+'" өнөөдөр аль хэдийн нэмэгдсэн байна. Дахин нэмэх үү?')){
+      _applyRecLock=false;return;
+    }
   }
   const id=uid();
   const datetime=nowDateTime();
@@ -4204,9 +4224,17 @@ tr:nth-child(even){background:#f7f6f2;}
 <div class="footer">Миний Санхүү · ${new Date().toLocaleString('mn-MN')}</div>
 </body></html>`;
   // PDF: HTML файлаар татаж авах (iframe хоригоос зайлсхийх)
-  const pdfBlob=new Blob([html],{type:'text/html;charset=utf-8'});
-  dlBlob(pdfBlob,'finance_report_'+nowDate()+'.html');
-  closeMgr();toast('HTML тайлан татагдлаа — браузерт нээж хэвлэх боломжтой');
+  // PDF: шинэ tab-д нээнэ (iOS + Desktop)
+  const w=window.open('','_blank');
+  if(w){
+    w.document.write(html);
+    w.document.close();
+    closeMgr();toast('📄 Тайлан нээгдлээ — хэвлэхийн тулд Ctrl+P дарна уу');
+  } else {
+    const pdfBlob=new Blob([html],{type:'text/html;charset=utf-8'});
+    dlBlob(pdfBlob,'finance_report_'+nowDate()+'.html');
+    closeMgr();toast('HTML тайлан бэлэн болоо');
+  }
 }
 
 function exportDOCX(){
@@ -4296,6 +4324,31 @@ function exportDOCX(){
 }
 
 function dlBlob(blob,name){
+  const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isPWA=window.navigator.standalone===true||window.matchMedia('(display-mode: standalone)').matches;
+  // iOS PWA-д download ажиллахгүй — шинэ tab-д нээнэ
+  if(isIOS||isPWA){
+    const reader=new FileReader();
+    reader.onload=function(e){
+      // HTML/text файлуудыг шинэ tab-д нээнэ
+      if(blob.type.includes('html')||blob.type.includes('text')||blob.type.includes('csv')){
+        const w=window.open('','_blank');
+        if(w){w.document.write(atob(e.target.result.split(',')[1]));w.document.close();}
+        else toast('Popup хориглогдсон байна — браузер тохиргоог шалгана уу');
+      } else {
+        // XLSX, DOCX — татах оролдоно
+        const a=document.createElement('a');
+        a.href=e.target.result;
+        a.download=name;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(()=>a.remove(),500);
+        toast('Файл бэлэн — Файлууд хэсгээс нээнэ үү');
+      }
+    };
+    reader.readAsDataURL(blob);
+    return;
+  }
   const reader=new FileReader();
   reader.onload=function(e){
     const a=document.createElement('a');
