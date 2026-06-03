@@ -526,13 +526,13 @@ body{background:var(--bg);color:var(--tx);font-family:'Sora',sans-serif;font-siz
         <div class="hc-lbl">Харилцах ⓘ</div>
         <div class="hc-val" id="h-har">₮0</div>
         <div style="display:flex;gap:6px;font-size:11px;margin-top:6px">
-          <div style="flex:1;background:rgba(255,255,255,.12);border-radius:6px;padding:5px 8px;cursor:pointer" onclick="setTab('income')">
-            <div style="font-size:9px;opacity:.7;margin-bottom:2px">💳 Карт</div>
-            <div style="font-weight:700" id="h-card">₮0</div>
+          <div style="flex:1;background:rgba(255,255,255,.12);border-radius:6px;padding:4px 6px;cursor:pointer;min-width:0" onclick="setTab('income')">
+            <div style="font-size:8px;opacity:.7;margin-bottom:1px;white-space:nowrap">💳 Карт</div>
+            <div style="font-weight:700;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="h-card">₮0</div>
           </div>
-          <div style="flex:1;background:rgba(255,255,255,.12);border-radius:6px;padding:5px 8px;cursor:pointer" onclick="openModal();selMType('transfer')">
-            <div style="font-size:9px;opacity:.7;margin-bottom:2px">💵 Бэлэн</div>
-            <div style="font-weight:700" id="h-cash">₮0</div>
+          <div style="flex:1;background:rgba(255,255,255,.12);border-radius:6px;padding:4px 6px;cursor:pointer;min-width:0" onclick="openModal();selMType('transfer')">
+            <div style="font-size:8px;opacity:.7;margin-bottom:1px;white-space:nowrap">💵 Бэлэн</div>
+            <div style="font-weight:700;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="h-cash">₮0</div>
           </div>
         </div>
       </div>
@@ -2905,7 +2905,8 @@ function saveSavingAcc(isNew){
 // ═══════════════════════════════════════════════════
 function bgCl(e){if(e.target===document.getElementById('modal-bg'))closeModal();}
 function closeModal(){document.getElementById('modal-bg').classList.remove('on');}
-function openModal(){mType='income';mAccount='card';trFrom='card';trTo='cash';buildModal();document.getElementById('modal-bg').classList.add('on');}
+function openModal(){
+  _selectedRecCat='';mType='income';mAccount='card';trFrom='card';trTo='cash';buildModal();document.getElementById('modal-bg').classList.add('on');}
 
 let trFrom='card', trTo='cash';
 function loanSelectChange(){
@@ -2952,7 +2953,7 @@ function buildModal(){
       h+='<div style="margin-bottom:10px">'+
         '<div style="font-size:11px;font-weight:600;color:var(--tx3);margin-bottom:6px">⚡ Давтагддаг орлогоос сонгох</div>'+
         '<div style="display:flex;flex-wrap:wrap;gap:6px">'+
-        _recs.map(r=>{const ri=(ACCS.recurring||[]).indexOf(r);return '<button class="acc-toggle" style="padding:6px 12px;font-size:12px" data-ri="'+ri+'" onclick="fillFromRecurring(this.dataset.ri)">'+r.name+' ('+fmt(r.amt)+')</button>';}).join('')+
+        _recs.map(r=>{const ri=(ACCS.recurring||[]).indexOf(r);return '<button class="acc-toggle" style="padding:6px 12px;font-size:12px" data-ri="'+ri+'" onclick="fillFromRecurring(this.dataset.ri);hideCatField()">'+r.name+' ('+fmt(r.amt)+')</button>';}).join('')+
         '</div></div>';
     }
     h+=catField('income');
@@ -2965,7 +2966,7 @@ function buildModal(){
       h+='<div style="margin-bottom:10px">'+
         '<div style="font-size:11px;font-weight:600;color:var(--tx3);margin-bottom:6px">⚡ Давтагддаг зарлагаас сонгох</div>'+
         '<div style="display:flex;flex-wrap:wrap;gap:6px">'+
-        _recsE.map(r=>{const ri=(ACCS.recurring||[]).indexOf(r);return '<button class="acc-toggle" style="padding:6px 12px;font-size:12px" data-ri="'+ri+'" onclick="fillFromRecurring(this.dataset.ri)">'+r.name+' ('+fmt(r.amt)+')</button>';}).join('')+
+        _recsE.map(r=>{const ri=(ACCS.recurring||[]).indexOf(r);return '<button class="acc-toggle" style="padding:6px 12px;font-size:12px" data-ri="'+ri+'" onclick="fillFromRecurring(this.dataset.ri);hideCatField()">'+r.name+' ('+fmt(r.amt)+')</button>';}).join('')+
         '</div></div>';
     }
     h+=catField('expense');
@@ -3139,6 +3140,14 @@ function buildModal(){
   const tm=document.getElementById('m-time');if(tm)tm.value=nowDateTime().slice(11,16);
 }
 
+function hideCatField(){
+  const el=document.getElementById('cat-field-wrap');
+  if(el)el.style.display='none';
+}
+function showCatField(){
+  const el=document.getElementById('cat-field-wrap');
+  if(el)el.style.display='block';
+}
 function catField(key){
   const cats=CATS[key]||[];
   let opts='';
@@ -3149,12 +3158,12 @@ function catField(key){
       opts+='</optgroup>';
     }else opts+='<option value="'+p.name+'">'+p.name+'</option>';
   });
-  return '<div class="f-row g1"><div class="f-grp"><div class="f-lbl">Ангилал '+
+  return '<div id="cat-field-wrap"><div class="f-row g1"><div class="f-grp"><div class="f-lbl">Ангилал '+
     '<button style="background:none;border:none;color:var(--bl);cursor:pointer;font-size:14px;padding:0;margin-left:4px" onclick="openCat(\''+key+'\')" title="засах">＋</button></div>'+
     (cats.length?'<select class="f-sel" id="m-cat">'+opts+'</select>':
       '<div style="background:var(--sur2);border:1.5px dashed var(--bd2);border-radius:var(--r);padding:9px 12px;font-size:12px;color:var(--tx3);display:flex;justify-content:space-between">'+
         '<span>Ангилал байхгүй</span><button style="background:none;border:none;color:var(--bl);cursor:pointer;font-family:Sora,sans-serif;font-size:12px" onclick="openCat(\''+key+'\')">+ Нэмэх</button></div>')+
-  '</div></div>';
+  '</div></div></div>';
 }
 function commonFields(noAccount){
   const accSel=noAccount?'':'<div class="f-grp"><div class="f-lbl">Данс</div>'+
@@ -3368,7 +3377,10 @@ function addTxn(){
   const date=dateVal;
   const datetime=dateVal+'T'+timeVal;
   const desc=(document.getElementById('m-desc')||{}).value||'';
-  const cat=(document.getElementById('m-cat')||{}).value||'';
+  // cat-field нуугдсан бол давтагддаг ангиллыг ашигла
+  const catWrap=document.getElementById('cat-field-wrap');
+  const isRecCat=catWrap&&catWrap.style.display==='none';
+  const cat=isRecCat?_selectedRecCat:((document.getElementById('m-cat')||{}).value||'');
   // Validation
   if(mType!=='loan_pay'&&mType!=='opening_balance'&&mType!=='transfer'){
     if(!amt||amt<=0){toast('Дүн оруулна уу (0-ээс их байх ёстой)');return;}
@@ -3899,23 +3911,19 @@ function saveRecurring(){
   sA(CU.username,ACCS);renderMgrRecurring();toast('Хадгалагдлаа');
 }
 
+// _selectedRecCat: давтагддаг бичилтийн ангиллыг addTxn-д дамжуулах
+let _selectedRecCat='';
 function fillFromRecurring(ri){
   const r=(ACCS.recurring||[])[parseInt(ri)];
   if(!r)return;
   const amtEl=document.getElementById('m-amt');
   const descEl=document.getElementById('m-desc');
-  const catEl=document.getElementById('m-cat');
   if(amtEl){amtEl.value=r.amt.toLocaleString();fmtI(amtEl);}
-  if(descEl&&!descEl.value)descEl.value=r.name;
+  if(descEl)descEl.value=r.name;
   if(r.account)selAcc(r.account);
-  // Ангилал бөглөх
-  if(r.cat&&catEl){
-    // select option-г тохируулна
-    for(let i=0;i<catEl.options.length;i++){
-      if(catEl.options[i].value===r.cat){catEl.selectedIndex=i;break;}
-    }
-  }
-  toast(r.name+' бөглөгдлөө — шалгаад нэмэх товч дарна уу');
+  // Давтагддаг ангиллыг тусдаа хувьсагчид хадгална
+  _selectedRecCat=r.cat||'';
+  toast(r.name+' бөглөгдлөө');
 }
 
 function applyRecurring(ri){
