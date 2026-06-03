@@ -1938,7 +1938,7 @@ function renderDashboard(flow){
   const incParents={};
   filteredTXN().forEach(t=>{
     if(t.type!=='income'&&t.type!=='saving_interest')return;
-    const full=(t.cat||t.desc||'Бусад');
+    const full=(t.cat||'Бусад');
     const parts=full.split('/');
     const pn=parts[0];
     const sn=parts.length>1?parts.slice(1).join('/'):null;
@@ -4005,9 +4005,10 @@ function applyRecurring(ri){
   const today=nowDate();
   const alreadyToday=TXN.some(t=>t.desc===r.name&&t.type===r.type&&t.amt===r.amt&&(t.date||'')===today);
   if(alreadyToday){
-    // confirm биш toast + return ашиглана — confirm iOS-д асуудал үүсгэдэг
-    toast('⚠️ "'+r.name+'" өнөөдөр аль хэдийн нэмэгдсэн байна!');
-    _applyRecLock=false;return;
+    _applyRecLock=false;
+    if(!confirm('⚠️ "'+r.name+'" өнөөдөр аль хэдийн нэмэгдсэн байна.\nДахин нэмэх үү?'))return;
+    _applyRecLock=true;
+    setTimeout(()=>{_applyRecLock=false;},1000);
   }
   const id=uid();
   const datetime=nowDateTime();
