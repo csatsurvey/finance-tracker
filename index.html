@@ -793,6 +793,19 @@ async function licCheck(){
     const snap=await fbDb.ref('keys/'+raw).once('value');
     const d=snap.val();
     if(!d){licShowErr('Лицензийн түлхүүр олдсонгүй.');btn.disabled=false;btn.textContent='Нэвтрэх →';return;}
+    // Идэвхтэй эсэх шалга
+    if(d.active===false||d.status==='blocked'){
+      licShowErr('⛔ Энэ түлхүүр хаагдсан байна. Асуух бол холбогдоно уу.');
+      btn.disabled=false;btn.textContent='Нэвтрэх →';return;
+    }
+    // Туршилтын хугацаа шалга
+    if(d.status==='trial'&&d.trialExp){
+      const today=new Date().toISOString().slice(0,10);
+      if(d.trialExp<today){
+        licShowErr('⏱ Туршилтын хугацаа дууссан байна. Төлбөр төлөөд нэвтэрнэ үү.');
+        btn.disabled=false;btn.textContent='Нэвтрэх →';return;
+      }
+    }
     // Device бүртгэл — хязгааргүй, статистик зорилгоор
     const devs=d.devices||[];
     const storedKey=localStorage.getItem('lic_key');
@@ -865,8 +878,22 @@ function licInit(){
       localStorage.removeItem('lic_dev');
       location.reload(); return;
     }
-    // Device хязгааргүй — key хүчинтэй байвал нэвтрүүлнэ
-    // (devId шалгахгүй)
+    // Идэвхтэй эсэх + туршилт шалга
+    if(kd.active===false||kd.status==='blocked'){
+      localStorage.removeItem('lic_ok');
+      localStorage.removeItem('lic_key');
+      localStorage.removeItem('lic_dev');
+      location.reload();return;
+    }
+    if(kd.status==='trial'&&kd.trialExp){
+      const today2=new Date().toISOString().slice(0,10);
+      if(kd.trialExp<today2){
+        localStorage.removeItem('lic_ok');
+        localStorage.removeItem('lic_key');
+        localStorage.removeItem('lic_dev');
+        location.reload();return;
+      }
+    }
   }).catch(function(e){
     console.warn('licInit error:',e);
   });
