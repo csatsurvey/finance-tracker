@@ -111,7 +111,7 @@ body{background:var(--bg);color:var(--tx);font-family:'Sora',sans-serif;font-siz
 .hero-card:hover{background:rgba(255,255,255,.18);}
 .hc-ico{font-size:15px;margin-bottom:4px;}
 .hc-lbl{font-size:10px;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.05em;font-weight:600;}
-.hc-val{font-size:16px;font-weight:700;color:#fff;margin-top:3px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}@media(max-width:380px){.hc-val{font-size:13px;}.hc-lbl{font-size:9px;}}
+.hc-val{font-size:15px;font-weight:700;color:#fff;margin-top:3px;line-height:1.2;word-break:break-all;}@media(max-width:420px){.hc-val{font-size:13px;}}@media(max-width:360px){.hc-val{font-size:11px;}.hc-lbl{font-size:9px;}}
 .hc-sub{font-size:10px;color:rgba(255,255,255,.4);margin-top:2px;}
 .hc-val.neg{color:#fca5a5;}
 .hc-val.pos{color:#86efac;}
@@ -484,7 +484,7 @@ body{background:var(--bg);color:var(--tx);font-family:'Sora',sans-serif;font-siz
     <div class="topbar-logo">Миний <em>Санхүү</em></div>
     <div class="topbar-r">
       <div class="chip" id="app-uname"></div>
-      <button class="btn-sm" onclick="location.reload()" title="Шинэчлэх">🔄</button>
+      <button class="btn-sm" onclick="doRefresh()" title="Шинэчлэх">🔄</button>
       <button class="btn-sm" onclick="goHome()">Гарах</button>
     </div>
   </div>
@@ -529,11 +529,11 @@ body{background:var(--bg);color:var(--tx);font-family:'Sora',sans-serif;font-siz
         <div style="display:flex;gap:6px;font-size:11px;margin-top:6px">
           <div style="flex:1;background:rgba(255,255,255,.12);border-radius:6px;padding:4px 6px;cursor:pointer;min-width:0" onclick="setTab('income')">
             <div style="font-size:8px;opacity:.7;margin-bottom:1px;white-space:nowrap">💳 Карт</div>
-            <div style="font-weight:700;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="h-card">₮0</div>
+            <div style="font-weight:700;font-size:11px;word-break:break-all" id="h-card">₮0</div>
           </div>
           <div style="flex:1;background:rgba(255,255,255,.12);border-radius:6px;padding:4px 6px;cursor:pointer;min-width:0" onclick="openModal();selMType('transfer')">
             <div style="font-size:8px;opacity:.7;margin-bottom:1px;white-space:nowrap">💵 Бэлэн</div>
-            <div style="font-weight:700;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="h-cash">₮0</div>
+            <div style="font-weight:700;font-size:11px;word-break:break-all" id="h-cash">₮0</div>
           </div>
         </div>
       </div>
@@ -1559,6 +1559,7 @@ function goApp(){
     renderAll();
     setTimeout(autoCalcInterests,800);
     fbStartSync(CU.username);
+    setTimeout(showChangelog,1500);
   });
 }
 function delUser(){
@@ -2983,7 +2984,7 @@ function buildModal(){
       h+='<div style="margin-bottom:10px">'+
         '<div style="font-size:11px;font-weight:600;color:var(--tx3);margin-bottom:6px">⚡ Давтагддаг орлогоос сонгох</div>'+
         '<div style="display:flex;flex-wrap:wrap;gap:6px">'+
-        _recs.map(r=>{const ri=(ACCS.recurring||[]).indexOf(r);return '<button class="acc-toggle" style="padding:6px 12px;font-size:12px" data-ri="'+ri+'" onclick="fillFromRecurring(this.dataset.ri);hideCatField()">'+r.name+' ('+fmt(r.amt)+')</button>';}).join('')+
+        _recs.map(r=>{const ri=(ACCS.recurring||[]).indexOf(r);return '<button class="acc-toggle" style="padding:6px 12px;font-size:12px" data-ri="'+ri+'" onclick="fillFromRecurring(this.dataset.ri)">'+r.name+' ('+fmt(r.amt)+')</button>';}).join('')+
         '</div></div>';
     }
     h+=catField('income');
@@ -2996,7 +2997,7 @@ function buildModal(){
       h+='<div style="margin-bottom:10px">'+
         '<div style="font-size:11px;font-weight:600;color:var(--tx3);margin-bottom:6px">⚡ Давтагддаг зарлагаас сонгох</div>'+
         '<div style="display:flex;flex-wrap:wrap;gap:6px">'+
-        _recsE.map(r=>{const ri=(ACCS.recurring||[]).indexOf(r);return '<button class="acc-toggle" style="padding:6px 12px;font-size:12px" data-ri="'+ri+'" onclick="fillFromRecurring(this.dataset.ri);hideCatField()">'+r.name+' ('+fmt(r.amt)+')</button>';}).join('')+
+        _recsE.map(r=>{const ri=(ACCS.recurring||[]).indexOf(r);return '<button class="acc-toggle" style="padding:6px 12px;font-size:12px" data-ri="'+ri+'" onclick="fillFromRecurring(this.dataset.ri)">'+r.name+' ('+fmt(r.amt)+')</button>';}).join('')+
         '</div></div>';
     }
     h+=catField('expense');
@@ -3407,10 +3408,8 @@ function addTxn(){
   const date=dateVal;
   const datetime=dateVal+'T'+timeVal;
   const desc=(document.getElementById('m-desc')||{}).value||'';
-  // cat-field нуугдсан бол давтагддаг ангиллыг ашигла
-  const catWrap=document.getElementById('cat-field-wrap');
-  const isRecCat=catWrap&&catWrap.style.display==='none';
-  const cat=isRecCat?_selectedRecCat:((document.getElementById('m-cat')||{}).value||'');
+  // _selectedRecCat байвал давтагддаг ангилал ашигла, үгүй бол m-cat
+  const cat=_selectedRecCat||((document.getElementById('m-cat')||{}).value||'');
   // Validation
   if(mType!=='loan_pay'&&mType!=='opening_balance'&&mType!=='transfer'){
     if(!amt||amt<=0){toast('Дүн оруулна уу (0-ээс их байх ёстой)');return;}
@@ -3956,6 +3955,46 @@ function fillFromRecurring(ri){
   toast(r.name+' бөглөгдлөө');
 }
 
+// ═══════════════════════════════════════════════════
+// REFRESH + CHANGELOG
+// ═══════════════════════════════════════════════════
+const CHANGELOG=[
+  {ver:'1.5',date:'2026-06-04',items:['Давтагддаг бичилтэд ангилал нэмэгдлээ','Бичилтийн жагсаалт хураангуйлагдах болсон (20 мөр)','PDF/Excel/Word утсанд preview харагдана','Зарлагын pie chart дэд ангилалаар харагдана','Лицензийн flash засагдлаа','Hero card дүн тасрахгүй болсон']},
+  {ver:'1.4',date:'2026-06-03',items:['iOS/Android PWA суулгах боломжтой болсон','Sync: txn+accs+cats бүгд real-time','Invite link системтэй болсон','Opening balance устгах хориглогдлоо']}
+];
+function doRefresh(){
+  toast('🔄 Шинэчлэж байна...');
+  if(CU&&initFB()){
+    fbPull(CU.username).then(()=>{
+      TXN=gT(CU.username);
+      ACCS=gA(CU.username)||defaultAccounts();
+      CATS=gC(CU.username);
+      renderAll();
+      showChangelog();
+    });
+  } else {
+    setTimeout(()=>location.reload(),500);
+  }
+}
+function showChangelog(){
+  const seen=localStorage.getItem('changelog_seen')||'0';
+  const latest=CHANGELOG[0].ver;
+  if(seen===latest)return;
+  localStorage.setItem('changelog_seen',latest);
+  const c=CHANGELOG[0];
+  const el=document.createElement('div');
+  el.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  el.innerHTML='<div style="background:var(--sur);border-radius:16px;padding:24px 20px;max-width:340px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,.2)">'+
+    '<div style="font-size:15px;font-weight:700;margin-bottom:4px">🆕 Шинэчлэлт v'+c.ver+'</div>'+
+    '<div style="font-size:11px;color:var(--tx3);margin-bottom:12px">'+c.date+'</div>'+
+    '<ul style="padding-left:16px;margin-bottom:16px">'+
+      c.items.map(i=>'<li style="font-size:13px;margin-bottom:6px;color:var(--tx)">'+i+'</li>').join('')+
+    '</ul>'+
+    '<button onclick="this.parentElement.parentElement.remove()" style="width:100%;padding:11px;background:var(--bl);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:Sora,sans-serif">✓ Ойлголоо</button>'+
+  '</div>';
+  document.body.appendChild(el);
+}
+
 let _applyRecLock=false;
 function applyRecurring(ri){
   if(_applyRecLock)return;
@@ -4191,7 +4230,7 @@ function _buildXLSX(rows,bal,flow,rng){
     // iOS/PWA-д Excel нээгдэхгүй — HTML preview
     const rows2=getExportRows();
     const previewHtml='<!DOCTYPE html><html lang="mn"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Excel тайлан</title><style>body{font-family:Arial,sans-serif;padding:16px;font-size:12px;}table{width:100%;border-collapse:collapse;font-size:10px;}th{background:#1e3a5f;color:#fff;padding:5px 6px;}td{padding:4px 6px;border-bottom:1px solid #ddd;word-break:break-word;}button.back{background:#1e40af;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;margin-bottom:12px;}@media(max-width:480px){th,td{font-size:9px;padding:3px 4px;}}</style></head><body>'+
-      '<button class="back" onclick="window.close()">← Буцах</button><h2>Санхүүгийн тайлан — Excel Preview</h2>'+
+      '<button class="back" onclick="if(window.history.length>1){window.history.back();}else{window.close();}">← Буцах</button><h2>Санхүүгийн тайлан — Excel Preview</h2>'+
       '<table><thead><tr><th>Огноо</th><th>Төрөл</th><th>Тайлбар</th><th>Ангилал</th><th>Орлого</th><th>Зарлага</th><th>Баланс</th></tr></thead><tbody>'+
       rows2.map(r=>'<tr><td>'+(r.огноо||'')+'</td><td>'+(r.төрөл||'')+'</td><td>'+(r.тайлбар||'')+'</td><td>'+(r.ангилал||'')+'</td><td style="color:#16a34a;text-align:right">'+(r.орлого?r.орлого.toLocaleString()+'₮':'')+'</td><td style="color:#dc2626;text-align:right">'+(r.зарлага?r.зарлага.toLocaleString()+'₮':'')+'</td><td style="text-align:right;font-weight:700">'+(+(r.баланс||0)).toLocaleString()+'₮</td></tr>').join('')+
       '</tbody></table></body></html>';
@@ -4243,7 +4282,7 @@ tr:nth-child(even){background:#f7f6f2;}
 .footer{margin-top:16px;font-size:10px;color:#a09b93;text-align:center;}
 @media print{body{padding:10px;}@page{margin:15mm;}}
 </style></head><body>
-<button class="back-btn" onclick="window.close()">← Буцах</button>
+<button class="back-btn" onclick="if(window.history.length>1){window.history.back();}else{window.close();}">← Буцах</button>
 <h1>Санхүүгийн тайлан</h1>
 <div class="meta">${CU.displayName} · ${nowDate()} · Хугацаа: ${rng}</div>
 <div class="summary">
@@ -4356,7 +4395,7 @@ function exportDOCX(){
   const isPWA2=window.navigator.standalone===true||window.matchMedia('(display-mode: standalone)').matches;
   if(isIOS||isPWA2){
     // iOS/PWA-д Word файл нээгдэхгүй тул HTML preview харуулна
-    const previewHtml='<!DOCTYPE html><html lang="mn"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Word тайлан</title><style>body{font-family:Arial,sans-serif;padding:16px;font-size:12px;}table{width:100%;border-collapse:collapse;font-size:11px;}th{background:#1e3a5f;color:#fff;padding:6px;}td{padding:5px;border-bottom:1px solid #ddd;}button.back{background:#1e40af;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;margin-bottom:12px;}</style></head><body><button class="back" onclick="window.close()">← Буцах</button><h2>Санхүүгийн тайлан — Word Preview</h2><p style="color:#666;font-size:11px;margin-bottom:12px;">iOS дээр Word файл татах боломжгүй тул preview харуулж байна.</p>'+
+    const previewHtml='<!DOCTYPE html><html lang="mn"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Word тайлан</title><style>body{font-family:Arial,sans-serif;padding:16px;font-size:12px;}table{width:100%;border-collapse:collapse;font-size:11px;}th{background:#1e3a5f;color:#fff;padding:6px;}td{padding:5px;border-bottom:1px solid #ddd;}button.back{background:#1e40af;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;margin-bottom:12px;}</style></head><body><button class="back" onclick="if(window.history.length>1){window.history.back();}else{window.close();}">← Буцах</button><h2>Санхүүгийн тайлан — Word Preview</h2><p style="color:#666;font-size:11px;margin-bottom:12px;">iOS дээр Word файл татах боломжгүй тул preview харуулж байна.</p>'+
       '<table><thead><tr><th>Огноо</th><th>Төрөл</th><th>Тайлбар</th><th>Ангилал</th><th>Орлого</th><th>Зарлага</th></tr></thead><tbody>'+
       rows.map(r=>'<tr><td>'+(r.огноо||'')+'</td><td>'+(r.төрөл||'')+'</td><td>'+(r.тайлбар||'')+'</td><td>'+(r.ангилал||'')+'</td><td style="color:#16a34a">'+(r.орлого?r.орлого.toLocaleString()+'₮':'')+'</td><td style="color:#dc2626">'+(r.зарлага?r.зарлага.toLocaleString()+'₮':'')+'</td></tr>').join('')+
       '</tbody></table></body></html>';
