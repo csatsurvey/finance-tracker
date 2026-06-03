@@ -719,6 +719,7 @@ body{background:var(--bg);color:var(--tx);font-family:'Sora',sans-serif;font-siz
       <button class="mgr-tab" onclick="setMgrTab('accounts',this)">🏦 Дансууд</button>
       <button class="mgr-tab" onclick="setMgrTab('recurring',this)">🔄 Давтагддаг</button>
       <button class="mgr-tab" onclick="setMgrTab('invite',this)">🔗 Холбоос</button>
+      <button class="mgr-tab" onclick="setMgrTab('feedback',this)">📢 Санал</button>
       <button class="mgr-tab" onclick="setMgrTab('reset',this)">🗑️ Цэвэрлэх</button>
     </div>
     <div class="mgr-section on" id="mgr-export">
@@ -739,6 +740,25 @@ body{background:var(--bg);color:var(--tx);font-family:'Sora',sans-serif;font-siz
         <button class="invite-share-btn" onclick="mgrInviteTelegram()">✈️ Telegram</button>
       </div>
       <div id="mgr-invite-msg" style="font-size:12px;text-align:center;color:var(--gn);display:none"></div>
+    </div>
+  </div>
+
+<div class="mgr-section" id="mgr-feedback">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="font-size:13px;color:var(--tx2)">Санал, хүсэлт, алдааны мэдэгдлийг бидэнд илгээнэ үү. Бид тантай холбогдох болно.</div>
+      <div class="f-row g1"><div class="f-grp"><div class="f-lbl">Төрөл</div>
+        <select class="f-sel" id="fb-type">
+          <option value="suggestion">💡 Санал</option>
+          <option value="bug">🐛 Алдаа</option>
+          <option value="question">❓ Асуулт</option>
+          <option value="other">📝 Бусад</option>
+        </select></div></div>
+      <div class="f-row g1"><div class="f-grp"><div class="f-lbl">Мессеж *</div>
+        <textarea id="fb-msg" style="width:100%;padding:10px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;font-family:Sora,sans-serif;background:var(--sur2);color:var(--tx);resize:vertical;min-height:100px;outline:none" placeholder="Санал хүсэлтээ энд бичнэ үү..."></textarea></div></div>
+      <div class="f-row g1"><div class="f-grp"><div class="f-lbl">Холбоо барих (заавал биш)</div>
+        <input class="f-in" id="fb-contact" placeholder="Утас эсвэл имэйл..."></div></div>
+      <button class="btn-main" onclick="submitFeedback()">📤 Илгээх</button>
+      <div id="fb-msg-result" style="font-size:12px;text-align:center;display:none"></div>
     </div>
   </div>
 
@@ -1586,7 +1606,7 @@ function goApp(){
     renderAll();
     setTimeout(autoCalcInterests,800);
     fbStartSync(CU.username);
-    setTimeout(showChangelog,1500);
+    if(!sessionStorage.getItem('cl_shown')){setTimeout(()=>{showChangelog();sessionStorage.setItem('cl_shown','1');},1500);}
   });
 }
 function delUser(){
@@ -3709,6 +3729,7 @@ function renderMgr(){
   if(mgrTab==='export')renderMgrExport();
   else if(mgrTab==='accounts')renderMgrAccounts();
   else if(mgrTab==='invite')mgrGenInvite();
+  else if(mgrTab==='feedback'){}
   else if(mgrTab==='recurring')renderMgrRecurring();
   else if(mgrTab==='reset')renderMgrReset();
 }
@@ -4016,28 +4037,24 @@ function fillFromRecurring(ri){
 // REFRESH + CHANGELOG
 // ═══════════════════════════════════════════════════
 const CHANGELOG=[
-  {ver:'1.6',date:'2026-06-04',items:['Service Worker кэш асуудал бүрэн засагдлаа','Давтагддаг бичилтийн дэд ангилал pie дээр зөв харагдана','🔄 Шинэчлэх товч FAB хэсэгт шилжлээ','Бичилтийн жагсаалт 20 мөрөөр хураангуйлагдана','Харилцах данс дүн тасрахгүй болсон']},
+  {ver:'1.8',date:'2026-06-04',items:['🔄 Шинэчлэх товч Firebase-аас татаж шинэчилнэ','📢 Санал хүсэлт илгээх боломж нэмэгдлээ','🥧 Others дэд ангилал pie дээр зөв задарна','⚠️ Hover tooltip алдаа засагдлаа','📋 Шинэчлэлт нэвтрэх бүрт нэг удаа харагдана']},
   {ver:'1.5',date:'2026-06-04',items:['Давтагддаг бичилтэд ангилал нэмэгдлээ','PDF/Excel/Word утсанд preview харагдана','Лицензийн flash засагдлаа']},
   {ver:'1.4',date:'2026-06-03',items:['iOS/Android PWA суулгах боломжтой болсон','Sync: txn+accs+cats бүгд real-time','Invite link системтэй болсон']}
 ];
 function doRefresh(){
   toast('🔄 Шинэчлэж байна...');
   if(CU&&initFB()){
-    // Firebase-аас татаж шинэчилнэ
     fbPull(CU.username).then(()=>{
       TXN=gT(CU.username);
       ACCS=gA(CU.username)||defaultAccounts();
       CATS=gC(CU.username);
       renderAll();
-      showChangelogForce();
       toast('✅ Шинэчлэгдлээ');
     }).catch(()=>{
-      // Firebase алдаа → хуудас дахин ачааллана
-      window.location.href=window.location.href.split('?')[0]+'?r='+Date.now();
+      toast('⚠️ Интернэт холбогдоогүй байна');
     });
   } else {
-    // Нэвтрээгүй үед кэш тойрч хуудас ачааллана
-    window.location.href=window.location.href.split('?')[0]+'?r='+Date.now();
+    toast('⚠️ Нэвтэрч орно уу');
   }
 }
 function showChangelogForce(){
@@ -4099,6 +4116,34 @@ function delRecurring(ri){
   if(!confirm('Устгах уу?'))return;
   ACCS.recurring.splice(parseInt(ri),1);
   sA(CU.username,ACCS);renderMgrRecurring();toast('Устгагдлаа');
+}
+
+function submitFeedback(){
+  const type=document.getElementById('fb-type').value;
+  const msg=document.getElementById('fb-msg').value.trim();
+  const contact=document.getElementById('fb-contact').value.trim();
+  const res=document.getElementById('fb-msg-result');
+  if(!msg){toast('Мессеж оруулна уу');return;}
+  if(!initFB()){toast('Firebase холбогдоогүй');return;}
+  const data={
+    type,msg,contact,
+    user:CU?CU.username:'unknown',
+    date:nowDate(),
+    datetime:nowDateTime(),
+    ver:'1.8'
+  };
+  fbDb.ref('feedback/'+uid()).set(data).then(()=>{
+    res.style.display='block';
+    res.style.color='var(--gn)';
+    res.textContent='✅ Амжилттай илгээгдлээ! Баярлалаа.';
+    document.getElementById('fb-msg').value='';
+    document.getElementById('fb-contact').value='';
+    setTimeout(()=>{res.style.display='none';},3000);
+  }).catch(e=>{
+    res.style.display='block';
+    res.style.color='var(--rd)';
+    res.textContent='⚠️ Алдаа: '+e.message;
+  });
 }
 
 function renderMgrReset(){
