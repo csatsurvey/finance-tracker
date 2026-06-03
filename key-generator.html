@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🔑 Key Үүсгэгч — Миний Санхүү</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',sans-serif;background:#f1f5f9;min-height:100vh;padding:20px;}
+.wrap{max-width:600px;margin:0 auto;}
+.header{background:linear-gradient(135deg,#1e3a5f,#1e40af);color:#fff;border-radius:16px;padding:24px;margin-bottom:20px;}
+.header h1{font-size:22px;margin-bottom:4px;}
+.header p{font-size:13px;opacity:.7;}
+.card{background:#fff;border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.08);}
+.card h2{font-size:15px;font-weight:700;margin-bottom:14px;color:#1e3a5f;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+label{font-size:12px;font-weight:600;color:#6b7280;display:block;margin-bottom:4px;}
+input,select{width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:14px;outline:none;}
+input:focus,select:focus{border-color:#1e40af;}
+.btn{padding:10px 20px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;}
+.btn-primary{background:#1e40af;color:#fff;width:100%;}
+.btn-danger{background:#dc2626;color:#fff;padding:6px 12px;font-size:12px;}
+.btn-sm{background:#f3f4f6;color:#374151;padding:5px 10px;font-size:11px;border-radius:6px;border:none;cursor:pointer;}
+.key-item{display:flex;justify-content:space-between;align-items:center;padding:12px;border:1.5px solid #e5e7eb;border-radius:8px;margin-bottom:8px;}
+.key-code{font-family:monospace;font-size:15px;font-weight:700;color:#1e40af;letter-spacing:.05em;}
+.key-meta{font-size:11px;color:#9ca3af;margin-top:2px;}
+.key-actions{display:flex;gap:6px;}
+.badge{padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;}
+.badge-ok{background:#dcfce7;color:#16a34a;}
+.badge-used{background:#fef9c3;color:#92400e;}
+.msg{padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:12px;}
+.msg-ok{background:#dcfce7;color:#16a34a;}
+.msg-err{background:#fee2e2;color:#dc2626;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <h1>🔑 Лицензийн Түлхүүр Үүсгэгч</h1>
+    <p>Миний Санхүү — Админ хэсэг</p>
+  </div>
+
+  <div class="card">
+    <h2>Шинэ түлхүүр үүсгэх</h2>
+    <div id="msg"></div>
+    <div class="form-row">
+      <div>
+        <label>Хэрэглэгчийн нэр</label>
+        <input id="user-name" placeholder="Болд, Халиун...">
+      </div>
+      <div>
+        <label>Тайлбар</label>
+        <input id="user-note" placeholder="Тайлбар...">
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="genKey()">+ Түлхүүр үүсгэх</button>
+  </div>
+
+  <div class="card">
+    <h2>Бүх түлхүүрүүд</h2>
+    <div id="key-list"><div style="color:#9ca3af;font-size:13px">Ачааллаж байна...</div></div>
+  </div>
+</div>
+
+<script>
+const FB_URL='https://finance-tracker-ca269-default-rtdb.firebaseio.com';
+let db;
+try{
+  const app=firebase.apps.length?firebase.apps[0]:firebase.initializeApp({databaseURL:FB_URL},'admin');
+  db=firebase.database(app);
+}catch(e){
+  try{db=firebase.database(firebase.app('admin'));}catch(e2){}
+}
+
+function uid(){return Math.random().toString(36).slice(2,6).toUpperCase()+'-'+Math.random().toString(36).slice(2,6).toUpperCase()+'-'+Math.random().toString(36).slice(2,6).toUpperCase();}
+
+function showMsg(m,ok){
+  const el=document.getElementById('msg');
+  el.className='msg '+(ok?'msg-ok':'msg-err');
+  el.textContent=m;
+  setTimeout(()=>el.textContent='',3000);
+}
+
+async function genKey(){
+  const name=document.getElementById('user-name').value.trim();
+  const note=document.getElementById('user-note').value.trim();
+  if(!name){showMsg('Хэрэглэгчийн нэр оруулна уу','');return;}
+  const key=uid();
+  await db.ref('keys/'+key.replace(/-/g,'')).set({
+    createdAt:new Date().toISOString().slice(0,10),
+    userName:name,
+    note:note,
+    devices:[],
+    used:false
+  });
+  showMsg('✅ Түлхүүр үүслээ: '+key, true);
+  loadKeys();
+}
+
+async function deleteKey(raw){
+  if(!confirm('Устгах уу?'))return;
+  await db.ref('keys/'+raw).remove();
+  loadKeys();
+}
+
+async function resetKey(raw){
+  await db.ref('keys/'+raw).update({devices:[],used:false});
+  alert('Бүх төхөөрөмж цэвэрлэгдлээ');
+  loadKeys();
+}
+
+async function loadKeys(){
+  const el=document.getElementById('key-list');
+  el.innerHTML='<div style="color:#9ca3af;font-size:13px">Ачааллаж байна...</div>';
+  const snap=await db.ref('keys').once('value');
+  const data=snap.val();
+  if(!data){el.innerHTML='<div style="color:#9ca3af;font-size:13px">Түлхүүр байхгүй</div>';return;}
+  const keys=Object.entries(data).sort((a,b)=>(b[1].createdAt||'').localeCompare(a[1].createdAt||''));
+  el.innerHTML=keys.map(([raw,d])=>{
+    const fmt=raw.match(/.{1,4}/g).join('-');
+    const devCount=(d.devices||[]).length;
+    return '<div class="key-item">'+
+      '<div>'+
+        '<div class="key-code">'+fmt+'</div>'+
+        '<div class="key-meta">'+(d.userName||'')+(d.note?' · '+d.note:'')+'</div>'+
+        '<div class="key-meta">'+d.createdAt+' · '+devCount+' төхөөрөмж</div>'+
+      '</div>'+
+      '<div class="key-actions">'+
+        '<button class="btn-sm" onclick="resetKey(\''+raw+'\')">Цэвэрлэх</button>'+
+        '<button class="btn btn-danger" onclick="deleteKey(\''+raw+'\')">Устгах</button>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+loadKeys();
+</script>
+</body>
+</html>
