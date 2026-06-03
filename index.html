@@ -4013,16 +4013,21 @@ const CHANGELOG=[
 function doRefresh(){
   toast('🔄 Шинэчлэж байна...');
   if(CU&&initFB()){
+    // Firebase-аас татаж шинэчилнэ
     fbPull(CU.username).then(()=>{
       TXN=gT(CU.username);
       ACCS=gA(CU.username)||defaultAccounts();
       CATS=gC(CU.username);
       renderAll();
-      // Refresh дарахад changelog үргэлж харуулна
       showChangelogForce();
+      toast('✅ Шинэчлэгдлээ');
+    }).catch(()=>{
+      // Firebase алдаа → хуудас дахин ачааллана
+      window.location.href=window.location.href.split('?')[0]+'?r='+Date.now();
     });
   } else {
-    setTimeout(()=>location.reload(),500);
+    // Нэвтрээгүй үед кэш тойрч хуудас ачааллана
+    window.location.href=window.location.href.split('?')[0]+'?r='+Date.now();
   }
 }
 function showChangelogForce(){
