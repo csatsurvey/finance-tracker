@@ -151,7 +151,7 @@ body{background:var(--bg);color:var(--tx);font-family:'Sora',sans-serif;font-siz
 .lc-badge{border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;}
 .lc-badge.am{background:var(--am-bg);color:var(--am);border:1px solid var(--am-bd);}
 .lc-badge.gn{background:var(--gn-bg);color:var(--gn);border:1px solid var(--gn-bd);}
-.ac-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;}
+.ac-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;}@media(max-width:400px){.ac-grid{grid-template-columns:repeat(2,1fr);}}
 .ac-item{background:var(--sur2);border-radius:8px;padding:8px 10px;}
 .ac-lbl{font-size:10px;color:var(--tx3);font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin-bottom:2px;}
 .ac-val{font-size:13px;font-weight:700;}
@@ -2178,12 +2178,12 @@ function renderSavCards(bal){
           '<button class="del-btn" onclick="delSaving(\''+sv.id+'\')">🗑</button>'+
         '</div>'+
       '</div>'+
-      '<div class="ac-grid" style="grid-template-columns:repeat('+(sv.goal?'4':'3')+',1fr)">'+
+      '<div class="ac-grid" style="grid-template-columns:repeat(2,1fr)">'+
         '<div class="ac-item"><div class="ac-lbl">Одоогийн дүн</div><div class="ac-val bl">'+fmt(sb)+'</div></div>'+
         '<div class="ac-item"><div class="ac-lbl">Нийт хийлт</div><div class="ac-val">'+fmt(totalIn)+'</div></div>'+
         (intEarned>0?'<div class="ac-item"><div class="ac-lbl">Хүүний орлого</div><div class="ac-val gn">+'+fmt(intEarned)+'</div></div>':'')+
         (sv.goal?'<div class="ac-item"><div class="ac-lbl">Зорилго</div><div class="ac-val">'+fmt(sv.goal)+'</div></div>'+
-          '<div class="ac-item"><div class="ac-lbl">Дутагдал</div><div class="ac-val rd">'+fmt(Math.max(0,sv.goal-sb))+'</div></div>':'')+'</div>'+
+          '<div class="ac-item"><div class="ac-lbl">Дутагдал</div><div class="ac-val rd">'+(sb>=sv.goal?'✅ Хүрсэн':fmt(Math.max(0,sv.goal-sb)))+'</div></div>':'')+'</div>'+
       (pct!=null?'<div class="pbar-wrap"><div class="pbar-lbl"><span>'+fmt(sb)+'</span><span>'+fmt(sv.goal)+'</span></div>'+
         '<div class="pbar"><div class="pbar-f" style="width:'+pct+'%;background:linear-gradient(90deg,#2563eb,#60a5fa)"></div></div></div>':'')+
       (sv.rate>0?'<div class="int-box bl">'+
