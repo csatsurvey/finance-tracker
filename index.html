@@ -468,6 +468,7 @@ body{background:var(--bg);color:var(--tx);font-family:'Sora',sans-serif;font-siz
 <div class="scr" id="s-setup">
   <div class="setup-bx">
     <div class="setup-ttl">Шинэ хэрэглэгч</div>
+    <div class="fld" id="sk-fld"><label>Лицензийн түлхүүр</label><input id="sk" type="text" placeholder="XXXX-XXXX-XXXX" oninput="licFormatSetup(this)"></div>
     <div class="fld"><label>Нэр</label><input id="sn" type="text" placeholder="Болд, Халиун..."></div>
     <div class="fld"><label>4 оронтой PIN</label><input id="sp" type="password" inputmode="numeric" maxlength="4" placeholder="...."></div>
     <div class="fld"><label>PIN давтах</label><input id="sp2" type="password" inputmode="numeric" maxlength="4" placeholder="...."></div>
@@ -846,6 +847,11 @@ async function licCheck(){
       },50);
     },1000);
   }catch(e){licShowErr('Алдаа: '+e.message);btn.disabled=false;btn.textContent='Нэвтрэх →';}
+}
+
+function licFormatSetup(el){
+  let v=el.value.replace(/[^a-zA-Z0-9]/g,'').toUpperCase().slice(0,12);
+  el.value=v.match(/.{1,4}/g)?.join('-')||v;
 }
 
 function licInit(){
@@ -1244,7 +1250,7 @@ function fbStartSync(u){
   }
 }
 function fbStopSync(){
-  if(!initFB())return;
+  if(!initFB()||!CU)return;
   if(_syncListener){fbDb.ref(VER+'/'+CU.username+'/txn').off('value',_syncListener);_syncListener=null;}
   if(_syncAccsListener){fbDb.ref(VER+'/'+CU.username+'/accs').off('value',_syncAccsListener);_syncAccsListener=null;}
   if(_syncCatsListener){fbDb.ref(VER+'/'+CU.username+'/cats').off('value',_syncCatsListener);_syncCatsListener=null;}
@@ -1579,14 +1585,47 @@ async function chkPin(){
   if(!u){document.getElementById('pin-err').style.display='block';pinBuf='';updDots();return;}
   CU=u;goApp();
 }
-function goSetup(){scrShow('s-setup');}
+function goSetup(){
+  scrShow('s-setup');
+  const skFld=document.getElementById('sk-fld');
+  // License аль хэдийн байвал key талбарыг нуух
+  if(localStorage.getItem('lic_ok')==='1'&&skFld){
+    skFld.style.display='none';
+  } else if(skFld){
+    skFld.style.display='block';
+    // Хуучин key байвал автоматаар бөглөх
+    const k=localStorage.getItem('lic_key');
+    if(k){
+      const fmt=k.match(/.{1,4}/g);
+      if(fmt)document.getElementById('sk').value=fmt.join('-');
+    }
+  }
+}
 async function doSetup(){
   const nm=document.getElementById('sn').value.trim();
   const p=document.getElementById('sp').value,p2=document.getElementById('sp2').value;
   const e=document.getElementById('serr');
-  // License шалгах — зөвхөн баталгаажсан key-тэй үед л бүртгүүлнэ
+  // License шалгах
   if(localStorage.getItem('lic_ok')!=='1'){
-    se(e,'Эхлээд лицензийн түлхүүр оруулна уу');return;
+    const skEl=document.getElementById('sk');
+    const rawKey=(skEl?skEl.value:'').replace(/[^a-zA-Z0-9]/g,'').toUpperCase();
+    if(!rawKey){se(e,'⛔ Лицензийн түлхүүр оруулна уу');return;}
+    // Key Firebase-д шалгах
+    if(!initFB()){se(e,'Firebase холбогдоогүй');return;}
+    const snap=await fbDb.ref('keys/'+rawKey).once('value');
+    const kd=snap.val();
+    if(!kd){se(e,'❌ Түлхүүр буруу байна');return;}
+    if(kd.active===false||kd.status==='blocked'){se(e,'⛔ Энэ түлхүүр хаагдсан');return;}
+    if(kd.status==='trial'&&kd.trialExp){
+      const today=new Date().toISOString().slice(0,10);
+      if(kd.trialExp<today){se(e,'⏱ Туршилтын хугацаа дууссан');return;}
+    }
+    const devId=Math.random().toString(36).slice(2,10);
+    const devs=kd.devices||[];
+    await fbDb.ref('keys/'+rawKey).update({devices:[...devs,devId],usedAt:new Date().toISOString()});
+    localStorage.setItem('lic_key',rawKey);
+    localStorage.setItem('lic_ok','1');
+    localStorage.setItem('lic_dev',devId);
   }
   // Монгол болон латин нэрийг username болгох
   const slug=(nm.toLowerCase()
