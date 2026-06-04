@@ -1530,7 +1530,6 @@ function goHome(){
   renderHome();
   _showInstallHint();
   // Firebase-аас шинэ users татах
-  localStorage.removeItem(UK); // хуучин cache цэвэрлэх
   renderHome();
   if(initFB()){
     fbDb.ref(VER+'/users').once('value').then(snap=>{
@@ -1545,11 +1544,11 @@ function goHome(){
 function renderHome(){
   const us=gU();
   document.getElementById('user-list').innerHTML=us.map(u=>
-    '<div class="uc" onclick="goPin(\''+u.username+'\')">'+
+    '<div class="uc" onclick="goPin(\''+u.username+'\')">' +
     '<div><div class="uc-nm">'+u.displayName+'</div><div class="uc-h">#'+u.username+'</div></div>'+
     '<span style="color:var(--tx3);font-size:20px">›</span></div>'
-  ).join('');
-  document.getElementById('new-user-btn').style.display='block';
+  ).join('')+(us.length>0?'<div style="text-align:center;margin-top:12px"><button class="lnk" onclick="goSetup()">+ Шинэ хэрэглэгч нэмэх</button></div>':'');
+  document.getElementById('new-user-btn').style.display=us.length>0?'none':'block';
 }
 function goPin(un){
   pinTgt=un;pinBuf='';updDots();
