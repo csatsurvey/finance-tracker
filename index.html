@@ -484,7 +484,7 @@ body{background:var(--bg);color:var(--tx);font-family:'Sora',sans-serif;font-siz
     <div class="topbar-logo">Миний <em>Санхүү</em></div>
     <div class="topbar-r">
       <div class="chip" id="app-uname"></div>
-      <button class="btn-sm" onclick="goHome()">Гарах</button>
+      <button class="btn-sm" onclick="confirmGoHome()">Гарах</button>
     </div>
   </div>
 
@@ -846,7 +846,20 @@ async function licCheck(){
           scrShow('s-setup');
         }
       } else {
-        // Key-д username холбогдоогүй — шинэ бүртгэл
+        // linkedUsers байгаа эсэх шалга
+        const lSnap=await fbDb.ref('keys/'+raw+'/linkedUsers').once('value');
+        const linked2=lSnap.val()||[];
+        if(linked2.length>0){
+          const uSnap2=await fbDb.ref(VER+'/users').once('value');
+          const allU=uSnap2.val()||[];
+          const myU=allU.filter(u=>linked2.includes(u.username));
+          if(myU.length>0){
+            localStorage.setItem(UK,JSON.stringify(myU));
+            document.getElementById('s-home').style.display='flex';
+            document.getElementById('s-home').classList.add('on');
+            renderHome();return;
+          }
+        }
         localStorage.removeItem(UK);
         scrShow('s-setup');
       }
@@ -879,23 +892,22 @@ function licInit(){
         showLic();return;
       }
     }
-    // Key-тэй холбоотой username
-    const username=kd.username||null;
-    if(username){
+    // linkedUsers-аас хэрэглэгч татах
+    const linkedSnap=await fbDb.ref('keys/'+key+'/linkedUsers').once('value');
+    const linked=linkedSnap.val()||[];
+    if(linked.length>0){
       const uSnap=await fbDb.ref(VER+'/users').once('value');
-      const users=uSnap.val()||[];
-      const u=users.find(x=>x.username===username);
-      if(u){
-        localStorage.setItem(UK,JSON.stringify([u]));
-        pinTgt=username;pinBuf='';updDots();
-        document.getElementById('pin-err').style.display='none';
-        document.getElementById('pin-nm').textContent=u.displayName;
-        document.getElementById('pin-av').textContent=u.displayName[0].toUpperCase();
-        scrShow('s-pin');
+      const allUsers=uSnap.val()||[];
+      const myUsers=allUsers.filter(u=>linked.includes(u.username));
+      if(myUsers.length>0){
+        localStorage.setItem(UK,JSON.stringify(myUsers));
+        document.getElementById('s-home').style.display='flex';
+        document.getElementById('s-home').classList.add('on');
+        renderHome();
         return;
       }
     }
-    // Username байхгүй — setup
+    // linkedUsers байхгүй — setup
     localStorage.removeItem(UK);
     scrShow('s-setup');
   }).catch(function(){showLic();});
@@ -1226,7 +1238,7 @@ function fbStartSync(u){
   }
 }
 function fbStopSync(){
-  if(!initFB())return;
+  if(!initFB()||!CU)return;
   if(_syncListener){fbDb.ref(VER+'/'+CU.username+'/txn').off('value',_syncListener);_syncListener=null;}
   if(_syncAccsListener){fbDb.ref(VER+'/'+CU.username+'/accs').off('value',_syncAccsListener);_syncAccsListener=null;}
   if(_syncCatsListener){fbDb.ref(VER+'/'+CU.username+'/cats').off('value',_syncCatsListener);_syncCatsListener=null;}
@@ -1501,23 +1513,36 @@ function scrShow(id){
   document.querySelectorAll('.scr').forEach(s=>{s.style.display='none';s.classList.remove('on');});
   const el=document.getElementById(id);el.style.display='flex';el.classList.add('on');
 }
+function confirmGoHome(){
+  if(confirm('Гарах уу?\nДахин нэвтрэхэд нууц үгээ оруулах шаардлагатай.'))goHome();
+}
+async function loadKeyUsers(key){
+  const raw=(key||'').replace(/-/g,'').toUpperCase();
+  let users=[];
+  if(raw&&initFB()){
+    try{
+      const snap=await fbDb.ref('keys/'+raw+'/linkedUsers').once('value');
+      const linked=snap.val()||[];
+      if(linked.length>0){
+        const uSnap=await fbDb.ref(VER+'/users').once('value');
+        const all=uSnap.val()||[];
+        users=all.filter(u=>linked.includes(u.username));
+        localStorage.setItem(UK,JSON.stringify(users));
+      }
+    }catch(e){console.warn('loadKeyUsers:',e);}
+  }
+  if(!users.length)users=JSON.parse(localStorage.getItem(UK)||'[]');
+  renderHome();
+}
 function goHome(){
   CU=null;TXN=[];ACCS=null;CATS=null;
   fbStopSync();
   document.getElementById('fab-wrap').classList.remove('on');
+  scrShow('s-home');
   _showInstallHint();
-  // PIN дэлгэц рүү буцах
-  const u=gU()[0];
-  if(u){
-    pinTgt=u.username;pinBuf='';updDots();
-    document.getElementById('pin-err').style.display='none';
-    document.getElementById('pin-nm').textContent=u.displayName;
-    document.getElementById('pin-av').textContent=u.displayName[0].toUpperCase();
-    scrShow('s-pin');
-  } else {
-    scrShow('s-home');
-    renderHome();
-  }
+  const key=localStorage.getItem('lic_key');
+  if(key)loadKeyUsers(key);
+  else renderHome();
 }
 
 function renderHome(){
@@ -1526,7 +1551,7 @@ function renderHome(){
     '<div class="uc" onclick="goPin(\''+u.username+'\')">'+
     '<div><div class="uc-nm">'+u.displayName+'</div><div class="uc-h">#'+u.username+'</div></div>'+
     '<span style="color:var(--tx3);font-size:20px">›</span></div>'
-  ).join('');
+  ).join('')+(us.length>0?'<div style="text-align:center;margin-top:12px"><button class="lnk" onclick="goSetup()">+ Шинэ хэрэглэгч нэмэх</button></div>':'');
   document.getElementById('new-user-btn').style.display=us.length>0?'none':'block';
 }
 function goPin(un){
@@ -1583,11 +1608,14 @@ async function doSetup(){
   const hx=await sha(p);
   us.push({username:slug,displayName:nm,pinHash:hx});
   await sU(us);
-  // Key-д username холбох
+  // linkedUsers-д нэмэх
   const licKey=(localStorage.getItem('lic_key')||'').replace(/-/g,'').toUpperCase();
   if(licKey&&initFB()){
-    try{await fbDb.ref('keys/'+licKey).update({username:slug,userName:nm});}
-    catch(ex){console.warn('link:',ex);}
+    try{
+      const lsnap=await fbDb.ref('keys/'+licKey+'/linkedUsers').once('value');
+      const linked=lsnap.val()||[];
+      if(!linked.includes(slug))await fbDb.ref('keys/'+licKey+'/linkedUsers').set([...linked,slug]);
+    }catch(ex){console.warn('link:',ex);}
   }
   CU={username:slug,displayName:nm,pinHash:hx};e.style.display='none';
   ['sn','sp','sp2'].forEach(id=>document.getElementById(id).value='');
