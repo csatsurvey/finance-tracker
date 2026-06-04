@@ -1547,7 +1547,7 @@ function renderHome(){
     '<div><div class="uc-nm">'+u.displayName+'</div><div class="uc-h">#'+u.username+'</div></div>'+
     '<span style="color:var(--tx3);font-size:20px">›</span></div>'
   ).join('');
-  document.getElementById('new-user-btn').style.display=us.length>0?'none':'block';
+  document.getElementById('new-user-btn').style.display='block';
 }
 function goPin(un){
   pinTgt=un;pinBuf='';updDots();
@@ -1583,6 +1583,10 @@ async function doSetup(){
   const nm=document.getElementById('sn').value.trim();
   const p=document.getElementById('sp').value,p2=document.getElementById('sp2').value;
   const e=document.getElementById('serr');
+  // License шалгах — зөвхөн баталгаажсан key-тэй үед л бүртгүүлнэ
+  if(localStorage.getItem('lic_ok')!=='1'){
+    se(e,'Эхлээд лицензийн түлхүүр оруулна уу');return;
+  }
   // Монгол болон латин нэрийг username болгох
   const slug=(nm.toLowerCase()
     .replace(/ү/g,'u').replace(/ө/g,'o').replace(/ё/g,'yo')
