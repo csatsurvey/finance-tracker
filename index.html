@@ -836,14 +836,13 @@ async function licCheck(){
     localStorage.setItem('lic_key',raw);localStorage.setItem('lic_ok','1');localStorage.setItem('lic_dev',devId);
     licShowOk('✅ Амжилттай! Нэвтэрч байна...');
     setTimeout(()=>{
-      // s-home-г эхлээд нуугаад license screen хааж, дараа харуулна
       document.getElementById('s-home').style.display='none';
       document.getElementById('s-home').classList.remove('on');
       document.getElementById('lic-screen').classList.remove('on');
       setTimeout(()=>{
         document.getElementById('s-home').style.display='flex';
         document.getElementById('s-home').classList.add('on');
-        renderHome();
+        loadKeyUsers(raw);
       },50);
     },1000);
   }catch(e){licShowErr('Алдаа: '+e.message);btn.disabled=false;btn.textContent='Нэвтрэх →';}
@@ -864,21 +863,14 @@ function licInit(){
   }
 
   function showHome(){
-    const localUsers=JSON.parse(localStorage.getItem(UK)||'[]');
     function doShow(){
       document.getElementById('s-home').style.display='flex';
       document.getElementById('s-home').classList.add('on');
-      renderHome();
+      const key=localStorage.getItem('lic_key');
+      if(key)loadKeyUsers(key);
+      else renderHome();
     }
-    if(localUsers.length>0){doShow();return;}
-    if(!initFB()){doShow();return;}
-    fbDb.ref(VER+'/users').once('value').then(function(snap){
-      const fbUsers=snap.val();
-      if(fbUsers&&Array.isArray(fbUsers)&&fbUsers.length>0){
-        localStorage.setItem(UK,JSON.stringify(fbUsers));
-      }
-      doShow();
-    }).catch(function(){doShow();});
+    doShow();
   }
 
   const key=localStorage.getItem('lic_key');
@@ -1528,24 +1520,43 @@ function scrShow(id){
 function confirmGoHome(){
   if(confirm('Гарах уу?\nДахин нэвтрэхэд нууц үгээ оруулах шаардлагатай.'))goHome();
 }
+// Key-тэй холбоотой хэрэглэгчийг Firebase-аас татаж харуулах
+async function loadKeyUsers(key){
+  const raw=key.replace(/-/g,'').toUpperCase();
+  // keys/{key}/linkedUsers дотор тухайн key-тэй бүртгэлтэй username-ууд байна
+  let linkedUsernames=[];
+  if(initFB()){
+    try{
+      const snap=await fbDb.ref('keys/'+raw+'/linkedUsers').once('value');
+      linkedUsernames=snap.val()||[];
+    }catch(e){}
+  }
+  // Firebase users-аас зөвхөн linked хэрэглэгчдийг татах
+  let users=[];
+  if(linkedUsernames.length>0&&initFB()){
+    try{
+      const snap=await fbDb.ref(VER+'/users').once('value');
+      const all=snap.val()||[];
+      users=all.filter(u=>linkedUsernames.includes(u.username));
+      localStorage.setItem(UK,JSON.stringify(users));
+    }catch(e){
+      users=JSON.parse(localStorage.getItem(UK)||'[]');
+    }
+  } else {
+    users=JSON.parse(localStorage.getItem(UK)||'[]');
+  }
+  renderHome();
+}
+
 function goHome(){
   CU=null;TXN=[];ACCS=null;CATS=null;
   fbStopSync();
   document.getElementById('fab-wrap').classList.remove('on');
   scrShow('s-home');
-  renderHome();
   _showInstallHint();
-  // Firebase-аас шинэ users татах
-  renderHome();
-  if(initFB()){
-    fbDb.ref(VER+'/users').once('value').then(snap=>{
-      const fbUsers=snap.val();
-      if(fbUsers&&Array.isArray(fbUsers)&&fbUsers.length>0){
-        localStorage.setItem(UK,JSON.stringify(fbUsers));
-      }
-      renderHome();
-    }).catch(()=>renderHome());
-  }
+  const key=localStorage.getItem('lic_key');
+  if(key)loadKeyUsers(key);
+  else renderHome();
 }
 function renderHome(){
   const us=gU();
@@ -1644,8 +1655,22 @@ async function doSetup(){
   if(p.length!==4||!/^\d+$/.test(p))return se(e,'4 оронтой тоон PIN');
   if(p!==p2)return se(e,'PIN тохирохгүй');
   const us=gU();if(us.find(u=>u.username===slug))return se(e,'Нэр давхардсан');
-  const h=await sha(p);us.push({username:slug,displayName:nm,pinHash:h});sU(us);
-  CU={username:slug,displayName:nm,pinHash:h};e.style.display='none';
+  const hh=await sha(p);
+  const newUser={username:slug,displayName:nm,pinHash:hh};
+  us.push(newUser);
+  await sU(us);
+  // Key-тэй холбох — keys/{key}/linkedUsers-д нэмэх
+  const licKey=(localStorage.getItem('lic_key')||'').replace(/-/g,'').toUpperCase();
+  if(licKey&&initFB()){
+    try{
+      const snap=await fbDb.ref('keys/'+licKey+'/linkedUsers').once('value');
+      const linked=snap.val()||[];
+      if(!linked.includes(slug)){
+        await fbDb.ref('keys/'+licKey+'/linkedUsers').set([...linked,slug]);
+      }
+    }catch(e2){console.warn('link user:',e2);}
+  }
+  CU={username:slug,displayName:nm,pinHash:hh};e.style.display='none';
   ['sn','sp','sp2'].forEach(id=>document.getElementById(id).value='');
   goApp();toast('Бүртгэл амжилттай!');
 }
