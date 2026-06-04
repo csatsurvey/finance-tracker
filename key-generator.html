@@ -237,6 +237,7 @@ function renderKeys(){
         (d.status!=='trial'?'<button class="btn-sm btn-warn" onclick="setStatus(\''+raw+'\',\'trial\')">🟡 Туршилт</button>':'')+
         (d.status!=='blocked'?'<button class="btn-sm btn-danger" onclick="setStatus(\''+raw+'\',\'blocked\')">🔴 Хаах</button>':
           '<button class="btn-sm btn-success" onclick="setStatus(\''+raw+'\',\'paid\')">🔓 Нээх</button>')+
+        '<button class="btn-sm" onclick="manageUsers(\''+raw+'\')">👤 Хэрэглэгч</button>'+
         '<button class="btn-sm" onclick="resetDevices(\''+raw+'\')">📱 Цэвэрлэх</button>'+
         '<button class="btn-sm btn-danger" onclick="deleteKey(\''+raw+'\')">🗑 Устгах</button>'+
       '</div>'+
@@ -256,6 +257,56 @@ document.querySelector('.wrap').insertAdjacentHTML('beforeend', `
   <h2>📢 Санал хүсэлтүүд</h2>
   <div id="fb-list"><div style="color:#9ca3af;font-size:13px">Ачааллаж байна...</div></div>
 </div>`);
+
+async function manageUsers(raw){
+  const snap=await db.ref('keys/'+raw+'/linkedUsers').once('value');
+  const linked=snap.val()||[];
+  const allSnap=await db.ref('mf101/users').once('value');
+  const allUsers=(allSnap.val()||[]);
+  const fmt=raw.match(/.{1,4}/g).join('-');
+  
+  const modal=document.createElement('div');
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML=`<div style="background:#fff;border-radius:16px;padding:24px;max-width:400px;width:100%;max-height:80vh;overflow-y:auto">
+    <div style="font-size:16px;font-weight:700;margin-bottom:16px">👤 Хэрэглэгч — ${fmt}</div>
+    <div style="font-size:12px;color:#6b7280;margin-bottom:12px">Холбоотой хэрэглэгчид:</div>
+    <div id="linked-list" style="margin-bottom:16px">${linked.length?linked.map(u=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:6px">
+        <span style="font-size:13px">${u}</span>
+        <button onclick="unlinkUser('${raw}','${u}',this.parentElement.parentElement.parentElement.parentElement)" style="background:#fee2e2;color:#dc2626;border:none;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer">Хасах</button>
+      </div>`).join(''):'<div style="color:#9ca3af;font-size:13px">Хэрэглэгч байхгүй</div>'}
+    </div>
+    <div style="font-size:12px;color:#6b7280;margin-bottom:8px">Бүх хэрэглэгч:</div>
+    <select id="add-user-sel" style="width:100%;padding:8px;border:1.5px solid #e5e7eb;border-radius:8px;margin-bottom:10px;font-size:13px">
+      <option value="">— Сонгох —</option>
+      ${allUsers.filter(u=>!linked.includes(u.username)).map(u=>`<option value="${u.username}">${u.displayName} (#${u.username})</option>`).join('')}
+    </select>
+    <button onclick="linkUser('${raw}',this.parentElement)" style="width:100%;padding:10px;background:#1e40af;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:10px">+ Нэмэх</button>
+    <button onclick="this.parentElement.parentElement.remove()" style="width:100%;padding:10px;background:#f3f4f6;color:#374151;border:none;border-radius:8px;font-size:13px;cursor:pointer">Хаах</button>
+  </div>`;
+  document.body.appendChild(modal);
+}
+
+async function linkUser(raw, container){
+  const sel=container.querySelector('#add-user-sel');
+  const username=sel.value;
+  if(!username)return alert('Хэрэглэгч сонгоно уу');
+  const snap=await db.ref('keys/'+raw+'/linkedUsers').once('value');
+  const linked=snap.val()||[];
+  if(linked.includes(username))return alert('Аль хэдийн холбоотой');
+  await db.ref('keys/'+raw+'/linkedUsers').set([...linked,username]);
+  alert('✅ Нэмэгдлээ: '+username);
+  container.parentElement.remove();
+}
+
+async function unlinkUser(raw, username, modal){
+  if(!confirm(username+'-г хасах уу?'))return;
+  const snap=await db.ref('keys/'+raw+'/linkedUsers').once('value');
+  const linked=(snap.val()||[]).filter(u=>u!==username);
+  await db.ref('keys/'+raw+'/linkedUsers').set(linked);
+  alert('Хасагдлаа');
+  modal.remove();
+}
 
 async function loadFeedback(){
   const snap=await db.ref('feedback').orderByChild('datetime').limitToLast(50).once('value');
