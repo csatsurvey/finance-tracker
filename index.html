@@ -1083,9 +1083,25 @@ const UK=VER+'_u', TK=u=>VER+'_t_'+u, AK=u=>VER+'_a_'+u, CK=u=>VER+'_c_'+u;
 // ── DATA LAYER: localStorage + Firebase sync ──
 // Бүх бичих үйлдэл хоёуланд хадгална (offline-д localStorage, online-д Firebase)
 const gU=()=>JSON.parse(localStorage.getItem(UK)||'[]');
-const sU=v=>{
+const sU=async v=>{
   localStorage.setItem(UK,JSON.stringify(v));
-  if(initFB())fbDb.ref(VER+'/users').set(v);
+  if(initFB()){
+    // Firebase-аас одоо байгаа жагсаалтыг татаж merge хийнэ
+    try{
+      const snap=await fbDb.ref(VER+'/users').once('value');
+      const fbUsers=snap.val()||[];
+      // Шинэ жагсаалтын хэрэглэгчдийг нэмж, хуучинг хэвээр үлдээнэ
+      const merged=[...fbUsers];
+      v.forEach(u=>{
+        if(!merged.find(x=>x.username===u.username))merged.push(u);
+        else{const idx=merged.findIndex(x=>x.username===u.username);merged[idx]=u;}
+      });
+      await fbDb.ref(VER+'/users').set(merged);
+    }catch(e){
+      // Merge амжилтгүй бол шууд set
+      fbDb.ref(VER+'/users').set(v);
+    }
+  }
 };
 const gT=u=>JSON.parse(localStorage.getItem(TK(u))||'[]');
 const sT=(u,v)=>{
