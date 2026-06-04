@@ -484,7 +484,7 @@ body{background:var(--bg);color:var(--tx);font-family:'Sora',sans-serif;font-siz
     <div class="topbar-logo">Миний <em>Санхүү</em></div>
     <div class="topbar-r">
       <div class="chip" id="app-uname"></div>
-      <button class="btn-sm" onclick="goHome()">Гарах</button>
+      <button class="btn-sm" onclick="confirmGoHome()">Гарах</button>
     </div>
   </div>
 
@@ -1519,6 +1519,9 @@ function scrShow(id){
   document.querySelectorAll('.scr').forEach(s=>{s.style.display='none';s.classList.remove('on');});
   const el=document.getElementById(id);el.style.display='flex';el.classList.add('on');
 }
+function confirmGoHome(){
+  if(confirm('Гарах уу?\nДахин нэвтрэхэд нууц үгээ оруулах шаардлагатай.'))goHome();
+}
 function goHome(){
   CU=null;TXN=[];ACCS=null;CATS=null;
   fbStopSync();
@@ -1526,18 +1529,17 @@ function goHome(){
   scrShow('s-home');
   renderHome();
   _showInstallHint();
-  // Firebase-аас хэрэглэгчийн жагсаалт татах
+  // Firebase-аас шинэ users татах
+  localStorage.removeItem(UK); // хуучин cache цэвэрлэх
+  renderHome();
   if(initFB()){
     fbDb.ref(VER+'/users').once('value').then(snap=>{
       const fbUsers=snap.val();
       if(fbUsers&&Array.isArray(fbUsers)&&fbUsers.length>0){
-        // Firebase-н жагсаалт илүү шинэ бол хэрэглэнэ
         localStorage.setItem(UK,JSON.stringify(fbUsers));
       }
       renderHome();
     }).catch(()=>renderHome());
-  } else {
-    renderHome();
   }
 }
 function renderHome(){
