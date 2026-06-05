@@ -460,7 +460,11 @@ body{background:var(--bg);color:var(--tx);font-family:'Sora',sans-serif;font-siz
       <button class="pk del" onclick="pd()">⌫</button>
     </div>
     <div class="pin-invite-note" id="pin-invite-note" style="display:none"></div>
-    <button class="lnk" onclick="goHome()">← Буцах</button>
+    <div style="text-align:center;margin-top:8px">
+      <button class="lnk" onclick="goHome()">← Буцах</button>
+      <span style="color:var(--tx3);margin:0 8px">·</span>
+      <button class="lnk" onclick="showPinForgot()">PIN мартсан?</button>
+    </div>
   </div>
 </div>
 
@@ -1586,6 +1590,14 @@ function renderHome(){
   ).join('');
   document.getElementById('new-user-btn').style.display='none';
 }
+function showPinForgot(){
+  const msg='PIN мартсан тохиолдолд:\n\n'+
+    '📞 Администратортой холбогдоно уу.\n\n'+
+    'Холбогдох утас: 90506652\n'+
+    '(Таны нэр болон бүртгүүлсэн мэдээллийг хэлбэл PIN шинэчилж өгнө)';
+  alert(msg);
+}
+
 function goPin(un){
   pinTgt=un;pinBuf='';updDots();
   document.getElementById('pin-err').style.display='none';
@@ -3242,8 +3254,11 @@ function buildModal(){
     const loanMapJson=JSON.stringify(loanBalMap).replace(/"/g,'&quot;');
     h+='<div class="info-box am">'+
       '📤 <strong>Зээл төлөх</strong><br>'+
-      'Банкнаас ирсэн хуулга эсвэл мэдэгдлийн дагуу бөглөнө.<br>'+
-      '<span style="opacity:.8">Жишээ: Нийт 503,000₮ төлсөн бол — нийт дүн: 503,000, үүнээс хүү: 3,000, үндсэн: 500,000</span></div>';
+      '<span style="opacity:.9">Банкнаас ирсэн хуулга дагуу бөглөнө:</span><br>'+
+      '<span style="opacity:.8">① Нийт төлсөн дүн → "Нийт дүн" талбарт<br>'+
+      '② Үүнээс хүүний хэсэг → "Хүүгийн төлбөр" талбарт<br>'+
+      '③ Үлдэгдэл нь үндсэн зээл болно<br>'+
+      'Жишээ: 503,000₮ төлсөн, хүү 3,000₮ → нийт: 503,000, хүү: 3,000</span></div>';
     const curMo2=nowDate().slice(0,7);
     const firstLoanId=activeLoan.length?activeLoan[0].id:null;
     const hasAutoInt=firstLoanId&&TXN.some(t=>t.type==='loan_interest'&&t._auto&&t.loanId===firstLoanId&&(t.date||'').slice(0,7)===curMo2);
