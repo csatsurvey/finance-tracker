@@ -222,7 +222,8 @@ function renderKeys(){
     return '<div class="key-item '+cls+'">'+
       '<div class="key-top">'+
         '<div>'+
-          '<div class="key-code">'+fmt+'</div>'+
+          '<div style="display:flex;align-items:center;gap:8px"><div class="key-code">'+fmt+'</div>'+
+          '<button onclick="navigator.clipboard.writeText(\''+fmt+'\').then(()=>alert(\'📋 Хуулагдлаа!\'))" style="background:#e0e7ff;border:none;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;color:#3730a3">📋</button></div>'+
           '<div class="key-meta">'+
             '👤 '+(d.userName||'—')+(d.phone?' · 📞 '+d.phone:'')+'<br>'+
             '📅 '+d.createdAt+' · 📱 '+devCount+' төхөөрөмж'+
@@ -277,14 +278,61 @@ async function manageUsers(raw){
       </div>`).join(''):'<div style="color:#9ca3af;font-size:13px">Хэрэглэгч байхгүй</div>'}
     </div>
     <div style="font-size:12px;color:#6b7280;margin-bottom:8px">Бүх хэрэглэгч:</div>
+    <div style="border-top:1px solid #e5e7eb;margin:12px 0;padding-top:12px">
+      <div style="font-size:12px;color:#6b7280;margin-bottom:8px;font-weight:600">✨ Шинэ хэрэглэгч үүсгэх:</div>
+      <input id="new-uname" placeholder="Хэрэглэгчийн нэр (Болд...)" style="width:100%;padding:8px;border:1.5px solid #e5e7eb;border-radius:8px;margin-bottom:6px;font-size:13px">
+      <input id="new-upin" type="tel" inputmode="numeric" maxlength="4" placeholder="4 оронтой PIN" style="width:100%;padding:8px;border:1.5px solid #e5e7eb;border-radius:8px;margin-bottom:8px;font-size:13px">
+      <button onclick="createAndLinkUser('${raw}',this.parentElement.parentElement)" style="width:100%;padding:10px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:10px">✨ Үүсгэж холбох</button>
+    </div>
     <select id="add-user-sel" style="width:100%;padding:8px;border:1.5px solid #e5e7eb;border-radius:8px;margin-bottom:10px;font-size:13px">
-      <option value="">— Сонгох —</option>
-      ${allUsers.filter(u=>!linked.includes(u.username)).map(u=>`<option value="${u.username}">${u.displayName} (#${u.username})</option>`).join('')}
+      <option value="">— Байгаа хэрэглэгч нэмэх —</option>
+      \${allUsers.filter(u=>!linked.includes(u.username)).map(u=>`<option value="\${u.username}">\${u.displayName} (#\${u.username})</option>`).join('')}
     </select>
     <button onclick="linkUser('${raw}',this.parentElement)" style="width:100%;padding:10px;background:#1e40af;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:10px">+ Нэмэх</button>
     <button onclick="this.parentElement.parentElement.remove()" style="width:100%;padding:10px;background:#f3f4f6;color:#374151;border:none;border-radius:8px;font-size:13px;cursor:pointer">Хаах</button>
   </div>`;
   document.body.appendChild(modal);
+}
+
+async function createAndLinkUser(raw, modal){
+  const name=document.getElementById('new-uname').value.trim();
+  const pin=document.getElementById('new-upin').value.trim();
+  if(!name){alert('Нэр оруулна уу');return;}
+  if(pin.length!==4||!/^\d+$/.test(pin)){alert('4 оронтой тоон PIN оруулна уу');return;}
+
+  // Username үүсгэх
+  const slug=(name.toLowerCase()
+    .replace(/ү/g,'u').replace(/ө/g,'o').replace(/а/g,'a').replace(/б/g,'b')
+    .replace(/в/g,'v').replace(/г/g,'g').replace(/д/g,'d').replace(/е/g,'e')
+    .replace(/ж/g,'j').replace(/з/g,'z').replace(/и/g,'i').replace(/й/g,'y')
+    .replace(/к/g,'k').replace(/л/g,'l').replace(/м/g,'m').replace(/н/g,'n')
+    .replace(/п/g,'p').replace(/р/g,'r').replace(/с/g,'s').replace(/т/g,'t')
+    .replace(/х/g,'h').replace(/ц/g,'ts').replace(/ч/g,'ch').replace(/ш/g,'sh')
+    .replace(/э/g,'e').replace(/ю/g,'yu').replace(/я/g,'ya')
+    .replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'')
+  ).slice(0,20)||('user'+Date.now().toString().slice(-6));
+
+  // PIN hash
+  const msgBuffer=new TextEncoder().encode(pin);
+  const hashBuffer=await crypto.subtle.digest('SHA-256',msgBuffer);
+  const hashArray=Array.from(new Uint8Array(hashBuffer));
+  const pinHash=hashArray.map(b=>b.toString(16).padStart(2,'0')).join('');
+
+  // Firebase-д хэрэглэгч нэмэх
+  const uSnap=await db.ref('mf101/users').once('value');
+  const users=uSnap.val()||[];
+  if(users.find(u=>u.username===slug)){alert('Нэр давхардсан: '+slug);return;}
+  users.push({username:slug,displayName:name,pinHash});
+  await db.ref('mf101/users').set(users);
+
+  // Key-д холбох
+  const lSnap=await db.ref('keys/'+raw+'/linkedUsers').once('value');
+  const linked=lSnap.val()||[];
+  await db.ref('keys/'+raw+'/linkedUsers').set([...linked,slug]);
+
+  alert('✅ Хэрэглэгч үүслээ: '+name+' (#'+slug+')\nPIN: '+pin);
+  modal.remove();
+  loadKeys();
 }
 
 async function linkUser(raw, container){
