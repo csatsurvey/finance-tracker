@@ -439,7 +439,7 @@ body{background:var(--bg);color:var(--tx);font-family:'Sora',sans-serif;font-siz
   <div class="home-logo">Миний <em>Санхүү</em></div>
   <div class="home-sub">Хувийн санхүүгийн бүртгэл</div>
   <div class="ul" id="user-list"></div>
-  <button class="btn-main" id="new-user-btn" onclick="goSetup()">+ Шинэ хэрэглэгч</button>
+  <!-- Шинэ хэрэглэгч товч хасагдсан — зөвхөн key-generator дээрээс үүсгэнэ -->
 </div>
 
 <!-- PIN -->
@@ -1554,8 +1554,8 @@ function renderHome(){
     '<div class="uc" onclick="goPin(\''+u.username+'\')">'+
     '<div><div class="uc-nm">'+u.displayName+'</div><div class="uc-h">#'+u.username+'</div></div>'+
     '<span style="color:var(--tx3);font-size:20px">›</span></div>'
-  ).join('')+(us.length>0?'<div style="text-align:center;margin-top:12px"><button class="lnk" onclick="goSetup()">+ Шинэ хэрэглэгч нэмэх</button></div>':'');
-  document.getElementById('new-user-btn').style.display=us.length>0?'none':'block';
+  ).join('');
+  document.getElementById('new-user-btn').style.display='none';
 }
 function goPin(un){
   pinTgt=un;pinBuf='';updDots();
