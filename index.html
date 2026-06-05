@@ -1522,7 +1522,8 @@ function calcFlow(){
     if(t.type==='expense')exp+=a;
     if(t.type==='saving_interest')savInt+=a; // хадгаламжийн хүү — харилцахд нөлөөлөхгүй, тусдаа
     if(t.type==='loan_pay')loanInt+=(t.fromInterest||0);
-    if(t.type==='loan_interest')loanInt+=a;
+    // loan_interest нь loan_pay.fromInterest-ээр тооцогдоно — давхар тооцохгүй
+    // if(t.type==='loan_interest')loanInt+=a;
     if(t.type==='saving_in'&&!t.isExisting)savIn+=a;
     if(t.type==='saving_out')savOut+=a;
     if(t.type==='loan_take'&&!t.isExisting)loanTake+=a;
@@ -1932,7 +1933,7 @@ function renderHero(bal,flow){
 
   // ── KPI ── (үргэлж шүүсэн хугацааны)
   document.getElementById('k-inc').textContent=fmt(flow.inc);
-  document.getElementById('k-exp').textContent=fmt(flow.exp+flow.loanInt);
+  document.getElementById('k-exp').textContent=fmt(flow.exp);
   // Зарлага KPI-д tooltip: зарлага + зээлийн хүүгийн нийлбэр
   const kexpEl=document.getElementById('k-exp');
   if(kexpEl&&flow.loanInt>0){
@@ -2032,7 +2033,7 @@ function renderDashboard(flow){
   }else{
     savF='зорилго тогтоогүй';
   }
-  const cfVal=flow.cashFlow!==undefined?flow.cashFlow:(flow.inc-flow.exp-flow.loanInt-flow.loanPay);
+  const cfVal=flow.cashFlow!==undefined?flow.cashFlow:(flow.inc-flow.exp-flow.loanPay);
   s.innerHTML=
     '<div class="ds" style="cursor:help">'+
       '<div class="ds-lbl">📊 Зарлагын хувь</div>'+
@@ -2090,7 +2091,7 @@ function renderDashboard(flow){
   // Pie — үндсэн болон дэд ангиллаар
   const pieParents={};
   filteredTXN().forEach(t=>{
-    if(t.type!=='expense'&&t.type!=='loan_interest'&&!(t.type==='loan_pay'&&(t.fromInterest||0)>0))return;
+    if(t.type!=='expense'&&!(t.type==='loan_pay'&&(t.fromInterest||0)>0))return;
     const amt=t.type==='loan_pay'?(t.fromInterest||0):t.amt;
     if(!amt)return;
     const rawCat=t.cat||'';
@@ -2340,19 +2341,8 @@ function autoCalcInterests(){
     added.push(sv.name+' +'+fmt(interest));
   });
 
-  // Зээлийн хүү — TXN-д аль хэдийн байвал нэмэхгүй
-  ACCS.loans.forEach(l=>{
-    if(!l.rate)return;
-    if(TXN.some(t=>t.type==='loan_interest'&&t.loanId===l.id&&(t.date||'').slice(0,7)===curMo))return;
-    const lb=bal.loans[l.id]||0;
-    if(lb<=0)return;
-    const interest=Math.round(lb*l.rate/100);
-    if(interest<=0)return;
-    TXN.unshift({id:uid(),type:'loan_interest',amt:interest,
-      date:nowDate(),datetime:nowDateTime(),
-      desc:l.name+' '+curMo+' хүү',loanId:l.id,cat:'Зээлийн хүү',_auto:true});
-    added.push(l.name+' +'+fmt(interest));
-  });
+  // Зээлийн хүү — loan_pay дотор fromInterest-ээр бичигдэнэ
+  // Auto loan_interest нэмэхгүй — зарлагад буруу орж байсан
 
   if(added.length>0){
     sT(CU.username,TXN);
@@ -2564,7 +2554,7 @@ function renderList(){
   const f=filteredTXN().filter(t=>{
     if(curTab==='all')return true;
     if(curTab==='income')return t.type==='income'||t.type==='saving_interest'||t.type==='opening_balance';
-    if(curTab==='expense')return t.type==='expense'||t.type==='loan_interest'||( t.type==='loan_pay'&&(t.fromInterest||0)>0);
+    if(curTab==='expense')return t.type==='expense'||(t.type==='loan_pay'&&(t.fromInterest||0)>0);
     if(curTab==='saving')return t.type==='saving_in'||t.type==='saving_out'||t.type==='saving_interest';
     if(curTab==='loan')return t.type==='loan_take'||t.type==='loan_pay'||t.type==='loan_interest';
     return true;
