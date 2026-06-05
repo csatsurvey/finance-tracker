@@ -1,40 +1,408 @@
-async function manageUsers(raw){
-  const snap=await db.ref('keys/'+raw+'/linkedUsers').once('value');
-  const linked=snap.val()||[];
-  const allSnap=await db.ref('mf101/users').once('value');
-  const allUsers=(allSnap.val()||[]);
-  const fmt=raw.match(/.{1,4}/g).join('-');
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Миний Санхүү — Админ</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',sans-serif;background:#f1f5f9;min-height:100vh;padding:20px;}
+.wrap{max-width:680px;margin:0 auto;}
+.header{background:linear-gradient(135deg,#1e3a5f,#1e40af);color:#fff;border-radius:16px;padding:24px;margin-bottom:20px;}
+.header h1{font-size:22px;margin-bottom:4px;}
+.card{background:#fff;border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.08);}
+.card h2{font-size:15px;font-weight:700;margin-bottom:14px;color:#1e3a5f;}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+label{font-size:12px;font-weight:600;color:#6b7280;display:block;margin-bottom:4px;}
+input,select{width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:14px;outline:none;font-family:inherit;}
+input:focus,select:focus{border-color:#1e40af;}
+.btn{padding:10px 20px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;}
+.btn-primary{background:#1e40af;color:#fff;width:100%;margin-top:4px;}
+.btn-sm{padding:5px 10px;font-size:11px;border-radius:6px;border:1.5px solid #e5e7eb;background:#f9fafb;color:#374151;cursor:pointer;font-family:inherit;}
+.btn-danger{background:#fee2e2;color:#dc2626;border:1.5px solid #fca5a5;}
+.btn-success{background:#dcfce7;color:#16a34a;border:1.5px solid #86efac;}
+.btn-warn{background:#fef9c3;color:#92400e;border:1.5px solid #fde047;}
+.btn-info{background:#e0e7ff;color:#3730a3;border:1.5px solid #a5b4fc;}
+.key-item{border:1.5px solid #e5e7eb;border-radius:10px;padding:14px;margin-bottom:10px;}
+.key-item.blocked{border-color:#fca5a5;background:#fff5f5;}
+.key-item.trial{border-color:#fde047;background:#fefce8;}
+.key-item.paid{border-color:#86efac;background:#f0fdf4;}
+.key-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;}
+.key-code{font-family:monospace;font-size:16px;font-weight:700;color:#1e40af;letter-spacing:.08em;}
+.key-meta{font-size:11px;color:#6b7280;margin-top:2px;line-height:1.6;}
+.key-actions{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;}
+.badge{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+.badge-paid{background:#dcfce7;color:#16a34a;}
+.badge-trial{background:#fef9c3;color:#92400e;}
+.badge-blocked{background:#fee2e2;color:#dc2626;}
+.msg{padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:12px;display:none;}
+.msg-ok{background:#dcfce7;color:#16a34a;}
+.msg-err{background:#fee2e2;color:#dc2626;}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;}
+.stat-card{background:#fff;border-radius:10px;padding:14px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.06);}
+.stat-num{font-size:24px;font-weight:700;}
+.stat-lbl{font-size:11px;color:#6b7280;margin-top:2px;}
+.filter-row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
+.filter-btn{padding:6px 14px;border-radius:20px;border:1.5px solid #e5e7eb;background:#fff;font-size:12px;cursor:pointer;font-family:inherit;}
+.filter-btn.on{background:#1e40af;color:#fff;border-color:#1e40af;}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;}
+.modal-box{background:#fff;border-radius:16px;padding:24px;max-width:400px;width:100%;max-height:80vh;overflow-y:auto;}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:16px;}
+.user-row{display:flex;justify-content:space-between;align-items:center;padding:8px;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:6px;}
+.user-name{font-size:13px;}
+.user-actions{display:flex;gap:4px;}
+.section-divider{border-top:1px solid #e5e7eb;margin:12px 0;padding-top:12px;}
+.section-label{font-size:12px;color:#6b7280;margin-bottom:8px;font-weight:600;}
+.fb-item{border:1.5px solid #e5e7eb;border-radius:10px;padding:12px 14px;margin-bottom:8px;}
+.fb-header{display:flex;justify-content:space-between;margin-bottom:6px;}
+.fb-type{font-weight:600;font-size:13px;}
+.fb-date{font-size:11px;color:#9ca3af;}
+.fb-msg{font-size:13px;margin-bottom:4px;}
+.fb-contact{font-size:11px;color:#6b7280;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <h1>🔑 Лицензийн Түлхүүр Үүсгэгч</h1>
+    <p style="font-size:13px;opacity:.7">Миний Санхүү — Борлуулалтын удирдлага</p>
+  </div>
 
-  const linkedHtml=linked.length?linked.map(function(u){
-    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:6px">'+
-      '<span style="font-size:13px">'+u+'</span>'+
-      '<div>'+
-      '<button onclick="resetPin(''+u+'',this.closest('[style*=fixed]')" style="background:#e0e7ff;color:#3730a3;border:none;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;margin-right:4px">PIN</button>'+
-      '<button onclick="unlinkUser(''+raw+'',''+u+'',this.closest('[style*=fixed]')" style="background:#fee2e2;color:#dc2626;border:none;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer">Hasax</button>'+
-      '</div></div>';
-  }).join(''):'<div style="color:#9ca3af;font-size:13px">Xereglegch baikhgui</div>';
+  <div class="stats">
+    <div class="stat-card"><div class="stat-num" id="s-total">—</div><div class="stat-lbl">Нийт key</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:#16a34a" id="s-paid">—</div><div class="stat-lbl">Төлсөн</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:#dc2626" id="s-blocked">—</div><div class="stat-lbl">Хаагдсан</div></div>
+  </div>
 
-  const userOpts=allUsers.filter(function(u){return !linked.includes(u.username);})
-    .map(function(u){return '<option value="'+u.username+'">'+u.displayName+' (#'+u.username+')</option>';}).join('');
+  <div class="card">
+    <h2>+ Шинэ түлхүүр үүсгэх</h2>
+    <div id="msg" class="msg"></div>
+    <div class="form-grid">
+      <div><label>Хэрэглэгчийн нэр *</label><input id="f-name" placeholder="Болд Баяр"></div>
+      <div><label>Утасны дугаар</label><input id="f-phone" placeholder="9911-2233" type="tel"></div>
+    </div>
+    <div class="form-grid">
+      <div>
+        <label>Төлбөрийн статус</label>
+        <select id="f-status">
+          <option value="trial">🟡 Туршилт (7 хоног)</option>
+          <option value="paid">🟢 Төлсөн</option>
+        </select>
+      </div>
+      <div><label>Тайлбар</label><input id="f-note" placeholder="Ямар сувгаар авсан..."></div>
+    </div>
+    <button class="btn btn-primary" onclick="genKey()">🔑 Түлхүүр үүсгэх</button>
+  </div>
 
-  const modal=document.createElement('div');
-  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
-  modal.innerHTML='<div style="background:#fff;border-radius:16px;padding:24px;max-width:400px;width:100%;max-height:80vh;overflow-y:auto">'+
-    '<div style="font-size:16px;font-weight:700;margin-bottom:16px">Heregleghchid - '+fmt+'</div>'+
-    '<div style="margin-bottom:16px">'+linkedHtml+'</div>'+
-    '<div style="border-top:1px solid #e5e7eb;margin:12px 0;padding-top:12px">'+
-      '<div style="font-size:12px;color:#6b7280;margin-bottom:8px;font-weight:600">Shine heregleghch uusgeh:</div>'+
-      '<input id="new-uname" placeholder="Ner (Bold...)" style="width:100%;padding:8px;border:1.5px solid #e5e7eb;border-radius:8px;margin-bottom:6px;font-size:13px">'+
-      '<input id="new-upin" type="tel" inputmode="numeric" maxlength="4" placeholder="4 digit PIN" style="width:100%;padding:8px;border:1.5px solid #e5e7eb;border-radius:8px;margin-bottom:8px;font-size:13px">'+
-      '<button onclick="createAndLinkUser(''+raw+'',this.closest('[style*=fixed]')" style="width:100%;padding:10px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:10px">+ Uusgej holbokh</button>'+
-    '</div>'+
-    '<select id="add-user-sel" style="width:100%;padding:8px;border:1.5px solid #e5e7eb;border-radius:8px;margin-bottom:10px;font-size:13px">'+
-      '<option value="">-- Songokh --</option>'+userOpts+
-    '</select>'+
-    '<button onclick="linkUser(''+raw+'',this.closest('[style*=fixed]')" style="width:100%;padding:10px;background:#1e40af;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;margin-bottom:10px">+ Nemekh</button>'+
-    '<button onclick="this.closest('[style*=fixed]').remove()" style="width:100%;padding:10px;background:#f3f4f6;color:#374151;border:none;border-radius:8px;font-size:13px;cursor:pointer">Haakh</button>'+
-  '</div>';
-  document.body.appendChild(modal);
+  <div class="card">
+    <h2>Бүх түлхүүрүүд</h2>
+    <div class="filter-row">
+      <button class="filter-btn on" onclick="setFilter('all',this)">Бүгд</button>
+      <button class="filter-btn" onclick="setFilter('paid',this)">🟢 Төлсөн</button>
+      <button class="filter-btn" onclick="setFilter('trial',this)">🟡 Туршилт</button>
+      <button class="filter-btn" onclick="setFilter('blocked',this)">🔴 Хаагдсан</button>
+    </div>
+    <div id="key-list"><div style="color:#9ca3af;font-size:13px">Ачааллаж байна...</div></div>
+  </div>
+
+  <div class="card">
+    <h2>📢 Санал хүсэлтүүд</h2>
+    <div id="fb-list"><div style="color:#9ca3af;font-size:13px">Ачааллаж байна...</div></div>
+  </div>
+</div>
+
+<!-- User Modal -->
+<div id="user-modal" style="display:none" class="modal-overlay" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal-box">
+    <div class="modal-title" id="modal-title">👤 Хэрэглэгч</div>
+    <div id="modal-linked-list" style="margin-bottom:16px"></div>
+    <div class="section-divider">
+      <div class="section-label">✨ Шинэ хэрэглэгч үүсгэх:</div>
+      <input id="new-uname" placeholder="Хэрэглэгчийн нэр (Болд...)" style="width:100%;padding:8px;border:1.5px solid #e5e7eb;border-radius:8px;margin-bottom:6px;font-size:13px">
+      <input id="new-upin" type="tel" inputmode="numeric" maxlength="4" placeholder="4 оронтой PIN" style="width:100%;padding:8px;border:1.5px solid #e5e7eb;border-radius:8px;margin-bottom:8px;font-size:13px">
+      <button onclick="createAndLinkUser()" style="width:100%;padding:10px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:10px">✨ Үүсгэж холбох</button>
+    </div>
+    <div class="section-label">Байгаа хэрэглэгч нэмэх:</div>
+    <select id="add-user-sel" style="width:100%;padding:8px;border:1.5px solid #e5e7eb;border-radius:8px;margin-bottom:10px;font-size:13px">
+      <option value="">— Сонгох —</option>
+    </select>
+    <button onclick="linkUser()" style="width:100%;padding:10px;background:#1e40af;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:10px">+ Нэмэх</button>
+    <button onclick="document.getElementById('user-modal').style.display='none'" style="width:100%;padding:10px;background:#f3f4f6;color:#374151;border:none;border-radius:8px;font-size:13px;cursor:pointer">Хаах</button>
+  </div>
+</div>
+
+<script>
+const FB_URL='https://finance-tracker-ca269-default-rtdb.firebaseio.com';
+let db, allKeys={}, curFilter='all', currentRaw='';
+
+try{
+  const app=firebase.apps.length?firebase.apps[0]:firebase.initializeApp({databaseURL:FB_URL},'admin2');
+  db=firebase.database(app);
+}catch(e){
+  try{db=firebase.database(firebase.app('admin2'));}catch(e2){console.error(e2);}
 }
 
-async function createAndLinkUser
+function uid(){
+  const s=()=>Math.random().toString(36).slice(2,6).toUpperCase();
+  return s()+'-'+s()+'-'+s();
+}
+function showMsg(m,ok){
+  const el=document.getElementById('msg');
+  el.className='msg '+(ok?'msg-ok':'msg-err');
+  el.textContent=m;el.style.display='block';
+  setTimeout(()=>{el.style.display='none';},3000);
+}
+function setFilter(f,btn){
+  curFilter=f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  renderKeys();
+}
+
+async function genKey(){
+  const name=document.getElementById('f-name').value.trim();
+  const phone=document.getElementById('f-phone').value.trim();
+  const status=document.getElementById('f-status').value;
+  const note=document.getElementById('f-note').value.trim();
+  if(!name){showMsg('Хэрэглэгчийн нэр оруулна уу');return;}
+  const key=uid();
+  const raw=key.replace(/-/g,'');
+  const trialExp=new Date();trialExp.setDate(trialExp.getDate()+7);
+  await db.ref('keys/'+raw).set({
+    createdAt:new Date().toISOString().slice(0,10),
+    userName:name,phone:phone||'',note:note||'',
+    status:status,
+    trialExp:status==='trial'?trialExp.toISOString().slice(0,10):'',
+    devices:[],active:true,linkedUsers:[]
+  });
+  showMsg('✅ Түлхүүр үүслээ: '+key,true);
+  document.getElementById('f-name').value='';
+  document.getElementById('f-phone').value='';
+  document.getElementById('f-note').value='';
+  loadKeys();
+}
+
+async function setStatus(raw,status){
+  await db.ref('keys/'+raw).update({status,active:status!=='blocked'});
+  loadKeys();
+}
+async function deleteKey(raw){
+  if(!confirm('Энэ түлхүүрийг устгах уу?'))return;
+  await db.ref('keys/'+raw).remove();loadKeys();
+}
+async function resetDevices(raw){
+  await db.ref('keys/'+raw).update({devices:[]});
+  showMsg('Төхөөрөмжүүд цэвэрлэгдлээ',true);loadKeys();
+}
+
+// ── User Management ──────────────────────────────────────────────────
+async function manageUsers(raw){
+  currentRaw=raw;
+  const fmt=raw.match(/.{1,4}/g).join('-');
+  document.getElementById('modal-title').textContent='👤 Хэрэглэгч — '+fmt;
+
+  // linkedUsers татах
+  const lSnap=await db.ref('keys/'+raw+'/linkedUsers').once('value');
+  const linked=lSnap.val()||[];
+
+  // Бүх хэрэглэгч татах
+  const uSnap=await db.ref('mf101/users').once('value');
+  const allUsers=uSnap.val()||[];
+
+  // Linked list render
+  const listEl=document.getElementById('modal-linked-list');
+  if(linked.length===0){
+    listEl.innerHTML='<div style="color:#9ca3af;font-size:13px;padding:8px 0">Хэрэглэгч байхгүй</div>';
+  } else {
+    listEl.innerHTML=linked.map(function(u){
+      return '<div class="user-row">'+
+        '<span class="user-name">'+u+'</span>'+
+        '<div class="user-actions">'+
+          '<button class="btn-sm btn-info" onclick="resetUserPin(\''+u+'\')">🔑 PIN</button>'+
+          '<button class="btn-sm btn-danger" onclick="unlinkUser(\''+u+'\')">Хасах</button>'+
+        '</div>'+
+      '</div>';
+    }).join('');
+  }
+
+  // Add user select
+  const sel=document.getElementById('add-user-sel');
+  const notLinked=allUsers.filter(function(u){return !linked.includes(u.username);});
+  sel.innerHTML='<option value="">— Сонгох —</option>'+
+    notLinked.map(function(u){
+      return '<option value="'+u.username+'">'+u.displayName+' (#'+u.username+')</option>';
+    }).join('');
+
+  // Clear inputs
+  document.getElementById('new-uname').value='';
+  document.getElementById('new-upin').value='';
+
+  document.getElementById('user-modal').style.display='flex';
+}
+
+async function unlinkUser(username){
+  if(!confirm(username+'-г хасах уу?'))return;
+  const snap=await db.ref('keys/'+currentRaw+'/linkedUsers').once('value');
+  const linked=(snap.val()||[]).filter(function(u){return u!==username;});
+  await db.ref('keys/'+currentRaw+'/linkedUsers').set(linked);
+  alert('Хасагдлаа');
+  manageUsers(currentRaw);
+}
+
+async function resetUserPin(username){
+  const newPin=prompt(username+'-н шинэ PIN (4 тоо):');
+  if(!newPin||newPin.length!==4||!/^\d+$/.test(newPin)){
+    alert('4 оронтой тоон PIN оруулна уу');return;
+  }
+  const msgBuffer=new TextEncoder().encode(newPin);
+  const hashBuffer=await crypto.subtle.digest('SHA-256',msgBuffer);
+  const hashArray=Array.from(new Uint8Array(hashBuffer));
+  const pinHash=hashArray.map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+  const snap=await db.ref('mf101/users').once('value');
+  const users=snap.val()||[];
+  const idx=users.findIndex(function(u){return u.username===username;});
+  if(idx<0){alert('Хэрэглэгч олдсонгүй');return;}
+  users[idx].pinHash=pinHash;
+  await db.ref('mf101/users').set(users);
+  alert('✅ PIN шинэчлэгдлээ!\n'+username+' → шинэ PIN: '+newPin);
+}
+
+async function createAndLinkUser(){
+  const name=document.getElementById('new-uname').value.trim();
+  const pin=document.getElementById('new-upin').value.trim();
+  if(!name){alert('Нэр оруулна уу');return;}
+  if(pin.length!==4||!/^\d+$/.test(pin)){alert('4 оронтой тоон PIN оруулна уу');return;}
+
+  const slug=name.toLowerCase()
+    .replace(/ү/g,'u').replace(/ө/g,'o').replace(/а/g,'a').replace(/б/g,'b')
+    .replace(/в/g,'v').replace(/г/g,'g').replace(/д/g,'d').replace(/е/g,'e')
+    .replace(/ж/g,'j').replace(/з/g,'z').replace(/и/g,'i').replace(/й/g,'y')
+    .replace(/к/g,'k').replace(/л/g,'l').replace(/м/g,'m').replace(/н/g,'n')
+    .replace(/п/g,'p').replace(/р/g,'r').replace(/с/g,'s').replace(/т/g,'t')
+    .replace(/х/g,'h').replace(/ц/g,'ts').replace(/ч/g,'ch').replace(/ш/g,'sh')
+    .replace(/э/g,'e').replace(/ю/g,'yu').replace(/я/g,'ya')
+    .replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'').slice(0,20)
+    ||('user'+Date.now().toString().slice(-6));
+
+  const msgBuffer=new TextEncoder().encode(pin);
+  const hashBuffer=await crypto.subtle.digest('SHA-256',msgBuffer);
+  const hashArray=Array.from(new Uint8Array(hashBuffer));
+  const pinHash=hashArray.map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+
+  const uSnap=await db.ref('mf101/users').once('value');
+  const users=uSnap.val()||[];
+  if(users.find(function(u){return u.username===slug;})){
+    alert('Нэр давхардсан: '+slug);return;
+  }
+  users.push({username:slug,displayName:name,pinHash:pinHash});
+  await db.ref('mf101/users').set(users);
+
+  const lSnap=await db.ref('keys/'+currentRaw+'/linkedUsers').once('value');
+  const linked=lSnap.val()||[];
+  await db.ref('keys/'+currentRaw+'/linkedUsers').set([...linked,slug]);
+
+  alert('✅ Хэрэглэгч үүслээ: '+name+' (#'+slug+')\nPIN: '+pin);
+  manageUsers(currentRaw);
+}
+
+async function linkUser(){
+  const sel=document.getElementById('add-user-sel');
+  const username=sel.value;
+  if(!username){alert('Хэрэглэгч сонгоно уу');return;}
+  const snap=await db.ref('keys/'+currentRaw+'/linkedUsers').once('value');
+  const linked=snap.val()||[];
+  if(linked.includes(username)){alert('Аль хэдийн холбоотой');return;}
+  await db.ref('keys/'+currentRaw+'/linkedUsers').set([...linked,username]);
+  alert('✅ Нэмэгдлээ: '+username);
+  manageUsers(currentRaw);
+}
+
+async function loadKeys(){
+  const snap=await db.ref('keys').once('value');
+  allKeys=snap.val()||{};
+  const today=new Date().toISOString().slice(0,10);
+  for(const [raw,d] of Object.entries(allKeys)){
+    if(d.status==='trial'&&d.trialExp&&d.trialExp<today){
+      await db.ref('keys/'+raw).update({status:'blocked',active:false});
+      allKeys[raw].status='blocked';allKeys[raw].active=false;
+    }
+  }
+  const vals=Object.values(allKeys);
+  document.getElementById('s-total').textContent=vals.length;
+  document.getElementById('s-paid').textContent=vals.filter(function(d){return d.status==='paid';}).length;
+  document.getElementById('s-blocked').textContent=vals.filter(function(d){return d.status==='blocked';}).length;
+  renderKeys();
+}
+
+function renderKeys(){
+  const el=document.getElementById('key-list');
+  const today=new Date().toISOString().slice(0,10);
+  let entries=Object.entries(allKeys).sort(function(a,b){return (b[1].createdAt||'').localeCompare(a[1].createdAt||'');});
+  if(curFilter!=='all')entries=entries.filter(function(e){return e[1].status===curFilter;});
+  if(!entries.length){el.innerHTML='<div style="color:#9ca3af;font-size:13px;padding:12px 0">Түлхүүр байхгүй</div>';return;}
+  el.innerHTML=entries.map(function(entry){
+    const raw=entry[0],d=entry[1];
+    const fmt=raw.match(/.{1,4}/g).join('-');
+    const devCount=(d.devices||[]).length;
+    const cls=d.status==='paid'?'paid':d.status==='blocked'?'blocked':'trial';
+    const badge=d.status==='paid'?'<span class="badge badge-paid">✅ Төлсөн</span>':
+                 d.status==='blocked'?'<span class="badge badge-blocked">🔴 Хаагдсан</span>':
+                 '<span class="badge badge-trial">🟡 Туршилт</span>';
+    const trialInfo=d.status==='trial'&&d.trialExp?
+      (d.trialExp<today?'⚠️ Хугацаа дууссан':'⏱ Дуусах: '+d.trialExp):'';
+    return '<div class="key-item '+cls+'">'+
+      '<div class="key-top">'+
+        '<div>'+
+          '<div style="display:flex;align-items:center;gap:8px">'+
+            '<div class="key-code">'+fmt+'</div>'+
+            '<button onclick="navigator.clipboard.writeText(\''+fmt+'\').then(function(){alert(\'📋 Хуулагдлаа!\');})" style="background:#e0e7ff;border:none;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;color:#3730a3">📋</button>'+
+          '</div>'+
+          '<div class="key-meta">'+
+            '👤 '+(d.userName||'—')+(d.phone?' · 📞 '+d.phone:'')+'<br>'+
+            '📅 '+d.createdAt+' · 📱 '+devCount+' төхөөрөмж'+
+            (d.note?' · '+d.note:'')+'<br>'+
+            (trialInfo?'<span style="color:#d97706">'+trialInfo+'</span>':'')
+          +'</div>'+
+        '</div>'+badge+
+      '</div>'+
+      '<div class="key-actions">'+
+        (d.status!=='paid'?'<button class="btn-sm btn-success" onclick="setStatus(\''+raw+'\',\'paid\')">✅ Төлсөн</button>':'')+
+        (d.status!=='trial'?'<button class="btn-sm btn-warn" onclick="setStatus(\''+raw+'\',\'trial\')">🟡 Туршилт</button>':'')+
+        (d.status!=='blocked'?'<button class="btn-sm btn-danger" onclick="setStatus(\''+raw+'\',\'blocked\')">🔴 Хаах</button>':
+          '<button class="btn-sm btn-success" onclick="setStatus(\''+raw+'\',\'paid\')">🔓 Нээх</button>')+
+        '<button class="btn-sm btn-info" onclick="manageUsers(\''+raw+'\')">👤 Хэрэглэгч</button>'+
+        '<button class="btn-sm" onclick="resetDevices(\''+raw+'\')">📱 Цэвэрлэх</button>'+
+        '<button class="btn-sm btn-danger" onclick="deleteKey(\''+raw+'\')">🗑 Устгах</button>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+async function loadFeedback(){
+  const snap=await db.ref('feedback').once('value');
+  const data=snap.val()||{};
+  const el=document.getElementById('fb-list');
+  const items=Object.entries(data).sort(function(a,b){return (b[1].datetime||'').localeCompare(a[1].datetime||'');});
+  if(!items.length){el.innerHTML='<div style="color:#9ca3af;font-size:13px">Санал хүсэлт байхгүй</div>';return;}
+  const icons={suggestion:'💡',bug:'🐛',question:'❓',other:'📝'};
+  el.innerHTML=items.map(function(item){
+    const d=item[1];
+    return '<div class="fb-item">'+
+      '<div class="fb-header">'+
+        '<span class="fb-type">'+(icons[d.type]||'📝')+' '+(d.type==='suggestion'?'Санал':d.type==='bug'?'Алдаа':d.type==='question'?'Асуулт':'Бусад')+'</span>'+
+        '<span class="fb-date">'+(d.datetime||d.date||'')+' · v'+(d.ver||'')+'</span>'+
+      '</div>'+
+      '<div class="fb-msg">'+d.msg+'</div>'+
+      (d.contact?'<div class="fb-contact">📞 '+d.contact+'</div>':'')+
+      '<div class="fb-contact">👤 '+(d.user||'unknown')+'</div>'+
+    '</div>';
+  }).join('');
+}
+
+loadKeys();
+loadFeedback();
+</script>
+</body>
+</html>
