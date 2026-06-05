@@ -881,7 +881,16 @@ function licInit(){
   const devId=localStorage.getItem('lic_dev');
 
   if(!(ok==='1'&&key&&devId)){showLic();return;}
-  if(!initFB()){showLic();return;}
+  if(!initFB()){
+    // Firebase байхгүй — offline горимд lic_ok байвал нэвтрүүлнэ
+    document.getElementById('s-home').style.display='flex';
+    document.getElementById('s-home').classList.add('on');
+    const localUsers=JSON.parse(localStorage.getItem(UK)||'[]');
+    if(localUsers.length>0){renderHome();}
+    else showLic();
+    return;
+  }
+  // Firebase ачаалж байна — хүлээнэ (showHome дуудахгүй)
 
   fbDb.ref('keys/'+key).once('value').then(async function(snap){
     const kd=snap.val();
@@ -1667,6 +1676,28 @@ function goApp(){
     setTimeout(autoCalcInterests,800);
     fbStartSync(CU.username);
     if(!sessionStorage.getItem('cl_shown')){setTimeout(()=>{showChangelog();sessionStorage.setItem('cl_shown','1');},1500);}
+    // Background-д key шалгах — хаагдсан бол logout
+    setTimeout(()=>{
+      const licKey=localStorage.getItem('lic_key');
+      if(licKey&&initFB()){
+        fbDb.ref('keys/'+licKey).once('value').then(ksnap=>{
+          const kd=ksnap.val();
+          if(!kd||kd.active===false||kd.status==='blocked'){
+            localStorage.removeItem('lic_ok');localStorage.removeItem('lic_key');localStorage.removeItem('lic_dev');
+            toast('⛔ Таны эрх хаагдлаа');
+            setTimeout(()=>{CU=null;TXN=[];ACCS=null;CATS=null;fbStopSync();document.getElementById('fab-wrap').classList.remove('on');document.getElementById('lic-screen').classList.add('on');},1500);
+          }
+          if(kd&&kd.status==='trial'&&kd.trialExp){
+            const today=new Date().toISOString().slice(0,10);
+            if(kd.trialExp<today){
+              localStorage.removeItem('lic_ok');localStorage.removeItem('lic_key');localStorage.removeItem('lic_dev');
+              toast('⏱ Туршилтын хугацаа дууслаа');
+              setTimeout(()=>{CU=null;TXN=[];ACCS=null;CATS=null;fbStopSync();document.getElementById('fab-wrap').classList.remove('on');document.getElementById('lic-screen').classList.add('on');},1500);
+            }
+          }
+        }).catch(()=>{});
+      }
+    },3000);
   });
 }
 function delUser(){
