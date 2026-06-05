@@ -468,6 +468,9 @@ body{background:var(--bg);color:var(--tx);font-family:'Sora',sans-serif;font-siz
 <div class="scr" id="s-setup">
   <div class="setup-bx">
     <div class="setup-ttl">Шинэ хэрэглэгч</div>
+    <div class="fld" id="sk-wrap"><label>Лицензийн түлхүүр</label>
+      <input id="sk" type="text" placeholder="XXXX-XXXX-XXXX" oninput="this.value=this.value.replace(/[^a-zA-Z0-9]/g,'').toUpperCase().slice(0,12).replace(/(.{4})/g,'$1-').replace(/-$/,'')">
+    </div>
     <div class="fld"><label>Нэр</label><input id="sn" type="text" placeholder="Болд, Халиун..."></div>
     <div class="fld"><label>4 оронтой PIN</label><input id="sp" type="password" inputmode="numeric" maxlength="4" placeholder="...."></div>
     <div class="fld"><label>PIN давтах</label><input id="sp2" type="password" inputmode="numeric" maxlength="4" placeholder="...."></div>
@@ -1583,7 +1586,14 @@ async function chkPin(){
   if(!u){document.getElementById('pin-err').style.display='block';pinBuf='';updDots();return;}
   CU=u;goApp();
 }
-function goSetup(){scrShow('s-setup');}
+function goSetup(){
+  scrShow('s-setup');
+  const skWrap=document.getElementById('sk-wrap');
+  const skEl=document.getElementById('sk');
+  // Хуучин key-г цэвэрлэ — өмнөх key ашиглахгүй байх
+  if(skEl)skEl.value='';
+  if(skWrap)skWrap.style.display='block';
+}
 async function doSetup(){
   const nm=document.getElementById('sn').value.trim();
   const p=document.getElementById('sp').value,p2=document.getElementById('sp2').value;
@@ -1608,8 +1618,26 @@ async function doSetup(){
   const hx=await sha(p);
   us.push({username:slug,displayName:nm,pinHash:hx});
   await sU(us);
+  // Setup дэлгэцэд оруулсан key шалгах
+  const skVal=(document.getElementById('sk')?.value||'').replace(/-/g,'').toUpperCase();
+  if(!skVal){se(e,'Лицензийн түлхүүр оруулна уу');return;}
+  // Өмнөх key-тэй ижил байвал хориглох
+  const prevKey=(localStorage.getItem('lic_key')||'').toUpperCase();
+  if(skVal===prevKey&&localStorage.getItem('lic_ok')==='1'){
+    // Өөрийн key-р өөрөө нэмж болно — зөвшөөрнө
+  }
+  // Firebase-д key шалгах
+  if(!initFB()){se(e,'Firebase холбогдоогүй');return;}
+  const kSnap=await fbDb.ref('keys/'+skVal).once('value');
+  const kd=kSnap.val();
+  if(!kd){se(e,'❌ Түлхүүр буруу байна');return;}
+  if(kd.active===false||kd.status==='blocked'){se(e,'⛔ Энэ түлхүүр хаагдсан байна');return;}
+  if(kd.status==='trial'&&kd.trialExp){
+    const today=new Date().toISOString().slice(0,10);
+    if(kd.trialExp<today){se(e,'⏱ Туршилтын хугацаа дууссан байна');return;}
+  }
   // linkedUsers-д нэмэх
-  const licKey=(localStorage.getItem('lic_key')||'').replace(/-/g,'').toUpperCase();
+  const licKey=skVal;
   if(licKey&&initFB()){
     try{
       const lsnap=await fbDb.ref('keys/'+licKey+'/linkedUsers').once('value');
