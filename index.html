@@ -4641,6 +4641,19 @@ window.addEventListener('DOMContentLoaded',()=>{
   }
   // License event bind
   licBindEvents();
+  // App version шалгаж кэш цэвэрлэх
+  const APP_VERSION='v1.9';
+  const savedVersion=localStorage.getItem('app_version');
+  if(savedVersion&&savedVersion!==APP_VERSION){
+    localStorage.setItem('app_version',APP_VERSION);
+    // Кэш тойрч шинэ файл татах
+    if(!window.location.search.includes('v=')){
+      window.location.href=window.location.pathname+'?v='+Date.now();
+      return;
+    }
+  }
+  localStorage.setItem('app_version',APP_VERSION);
+
   // URL-д token байвал invite flow эхлүүлнэ — licInit-ээс өмнө
   checkInviteToken().then(hasToken => {
     if (!hasToken) licInit();
