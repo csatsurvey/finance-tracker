@@ -274,6 +274,7 @@ async function manageUsers(raw){
     <div id="linked-list" style="margin-bottom:16px">${linked.length?linked.map(u=>`
       <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:6px">
         <span style="font-size:13px">${u}</span>
+        <button onclick="resetPin('${u}',this.parentElement.parentElement.parentElement.parentElement)" style="background:#e0e7ff;color:#3730a3;border:none;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;margin-right:4px">🔑 PIN</button>
         <button onclick="unlinkUser('${raw}','${u}',this.parentElement.parentElement.parentElement.parentElement)" style="background:#fee2e2;color:#dc2626;border:none;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer">Хасах</button>
       </div>`).join(''):'<div style="color:#9ca3af;font-size:13px">Хэрэглэгч байхгүй</div>'}
     </div>
@@ -353,6 +354,27 @@ async function unlinkUser(raw, username, modal){
   const linked=(snap.val()||[]).filter(u=>u!==username);
   await db.ref('keys/'+raw+'/linkedUsers').set(linked);
   alert('Хасагдлаа');
+  modal.remove();
+}
+
+async function resetPin(username, modal){
+  const newPin=prompt(username+'-н шинэ PIN (4 тоо):');
+  if(!newPin||newPin.length!==4||!/^\d+$/.test(newPin)){
+    alert('4 оронтой тоон PIN оруулна уу');return;
+  }
+  // SHA-256 hash
+  const msgBuffer=new TextEncoder().encode(newPin);
+  const hashBuffer=await crypto.subtle.digest('SHA-256',msgBuffer);
+  const hashArray=Array.from(new Uint8Array(hashBuffer));
+  const pinHash=hashArray.map(b=>b.toString(16).padStart(2,'0')).join('');
+  // Firebase-д шинэчлэх
+  const snap=await db.ref('mf101/users').once('value');
+  const users=snap.val()||[];
+  const idx=users.findIndex(u=>u.username===username);
+  if(idx<0){alert('Хэрэглэгч олдсонгүй');return;}
+  users[idx].pinHash=pinHash;
+  await db.ref('mf101/users').set(users);
+  alert('✅ PIN шинэчлэгдлээ!\n'+username+' → шинэ PIN: '+newPin);
   modal.remove();
 }
 
