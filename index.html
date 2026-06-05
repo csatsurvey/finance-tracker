@@ -881,16 +881,44 @@ function licInit(){
   const devId=localStorage.getItem('lic_dev');
 
   if(!(ok==='1'&&key&&devId)){showLic();return;}
-  if(!initFB()){
-    // Firebase байхгүй — offline горимд lic_ok байвал нэвтрүүлнэ
+
+  // lic_ok=1 байвал шууд нэвтрүүлнэ — Firebase background-д шалгана
+  const localUsers=JSON.parse(localStorage.getItem(UK)||'[]');
+  if(localUsers.length>0){
     document.getElementById('s-home').style.display='flex';
     document.getElementById('s-home').classList.add('on');
-    const localUsers=JSON.parse(localStorage.getItem(UK)||'[]');
-    if(localUsers.length>0){renderHome();}
-    else showLic();
+    renderHome();
+    // Background-д Firebase шалгах
+    if(initFB()){
+      fbDb.ref('keys/'+key).once('value').then(async function(ksnap){
+        const kd=ksnap.val();
+        if(!kd||kd.active===false||kd.status==='blocked'){
+          localStorage.removeItem('lic_ok');localStorage.removeItem('lic_key');localStorage.removeItem('lic_dev');
+          document.getElementById('s-home').style.display='none';
+          document.getElementById('s-home').classList.remove('on');
+          showLic();return;
+        }
+        if(kd.status==='trial'&&kd.trialExp&&kd.trialExp<new Date().toISOString().slice(0,10)){
+          localStorage.removeItem('lic_ok');localStorage.removeItem('lic_key');localStorage.removeItem('lic_dev');
+          document.getElementById('s-home').style.display='none';
+          document.getElementById('s-home').classList.remove('on');
+          showLic();return;
+        }
+        // linkedUsers шинэчлэх
+        const lsnap=await fbDb.ref('keys/'+key+'/linkedUsers').once('value');
+        const linked=lsnap.val()||[];
+        if(linked.length>0){
+          const uSnap=await fbDb.ref(VER+'/users').once('value');
+          const myUsers=(uSnap.val()||[]).filter(u=>linked.includes(u.username));
+          if(myUsers.length>0){localStorage.setItem(UK,JSON.stringify(myUsers));renderHome();}
+        }
+      }).catch(()=>{});
+    }
     return;
   }
-  // Firebase ачаалж байна — хүлээнэ (showHome дуудахгүй)
+
+  if(!initFB()){showLic();return;}
+  // Firebase-аас хэрэглэгч татах
 
   fbDb.ref('keys/'+key).once('value').then(async function(snap){
     const kd=snap.val();
