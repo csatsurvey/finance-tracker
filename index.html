@@ -922,10 +922,27 @@ function licInit(){
         return;
       }
     }
-    // linkedUsers байхгүй — setup
-    localStorage.removeItem(UK);
-    scrShow('s-setup');
-  }).catch(function(){showLic();});
+    // linkedUsers байхгүй — localStorage-аас хэрэглэгч хайх
+    const localU=JSON.parse(localStorage.getItem(UK)||'[]');
+    if(localU.length>0){
+      // localStorage-д хэрэглэгч байна — s-home харуулна
+      document.getElementById('s-home').style.display='flex';
+      document.getElementById('s-home').classList.add('on');
+      renderHome();
+    } else {
+      scrShow('s-setup');
+    }
+  }).catch(function(){
+    // Firebase алдаа — localStorage-аас харуулна
+    const localU2=JSON.parse(localStorage.getItem(UK)||'[]');
+    if(localU2.length>0){
+      document.getElementById('s-home').style.display='flex';
+      document.getElementById('s-home').classList.add('on');
+      renderHome();
+    } else {
+      showLic();
+    }
+  });
 }
 
 // ═══════════════════════════════════════════════════
