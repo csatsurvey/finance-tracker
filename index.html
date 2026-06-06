@@ -2614,7 +2614,13 @@ function setMainTab(tab,btn){
   document.getElementById('mtab-account-content').style.display=tab==='account'?'block':'none';
   if(tab==='report')renderDashboard();
   if(tab==='account'){renderLoanCards();renderSavCards();}
-  if(tab==='txn')renderList();
+  if(tab==='txn'){
+    // Бичилт tab нээхэд энэ сарын шүүлт автоматаар идэвхждэг
+    if(dfMode==='all'){
+      setDf('month',document.querySelector('.df-pill'));
+    }
+    renderList();
+  }
 }
 
 function toggleMoreTabs(btn){
@@ -2644,7 +2650,7 @@ function setTab(tab,btn){
   else{const m={all:0,income:1,expense:2,saving:3,loan:4};const tabs=document.querySelectorAll('.tb');if(tabs[m[tab]!==undefined?m[tab]:0])tabs[m[tab]!==undefined?m[tab]:0].classList.add('on');}
   renderList();
 }
-const TXN_PAGE_SIZE=20;
+const TXN_PAGE_SIZE=10;
 let txnShowAll=false;
 function setTxnShowAll(v){txnShowAll=v;renderList();}
 
@@ -2690,7 +2696,7 @@ function renderList(){
     '<div style="text-align:center;padding:12px 0">'+
     (txnShowAll?
       '<button onclick="setTxnShowAll(false)" style="background:var(--sur);border:1.5px solid var(--bd);border-radius:20px;padding:8px 20px;font-size:12px;font-weight:600;color:var(--bl);cursor:pointer;font-family:Sora,sans-serif">▲ Хураах</button>':
-      '<button onclick="setTxnShowAll(true)" style="background:var(--bl);border:none;border-radius:20px;padding:8px 20px;font-size:12px;font-weight:600;color:#fff;cursor:pointer;font-family:Sora,sans-serif">Дэлгэрэнгүй харах ('+(total-TXN_PAGE_SIZE)+' бичилт нэмэлт)</button>'
+      '<button onclick="setTxnShowAll(true)" style="background:var(--sur2);border:1.5px solid var(--bd);border-radius:20px;padding:8px 20px;font-size:12px;font-weight:600;color:var(--bl);cursor:pointer;font-family:Sora,sans-serif">+'+(total-TXN_PAGE_SIZE)+' бичилт дэлгэрэнгүй харах →</button>'
     )+'</div>':'');
 }
 
@@ -4252,7 +4258,7 @@ function fillFromRecurring(ri){
 // REFRESH + CHANGELOG
 // ═══════════════════════════════════════════════════
 const CHANGELOG=[
-  {ver:'1.8',date:'2026-06-04',items:['🔄 Шинэчлэх товч Firebase-аас татаж шинэчилнэ','📢 Санал хүсэлт илгээх боломж нэмэгдлээ','🥧 Others дэд ангилал pie дээр зөв задарна','⚠️ Hover tooltip алдаа засагдлаа','📋 Шинэчлэлт нэвтрэх бүрт нэг удаа харагдана']},
+  {ver:'1.9',date:'2026-06-05',items:['🏠 4 tab layout — Нүүр/Бичилт/Тайлан/Данс','📋 Бичилтийн жагсаалт хугацааны шүүлттэй','🔢 10+ бичилт бол "Дэлгэрэнгүй" товч','⚡ Зээлийн хүү зарлагад буруу орж байсан засагдлаа']},
   {ver:'1.5',date:'2026-06-04',items:['Давтагддаг бичилтэд ангилал нэмэгдлээ','PDF/Excel/Word утсанд preview харагдана','Лицензийн flash засагдлаа']},
   {ver:'1.4',date:'2026-06-03',items:['iOS/Android PWA суулгах боломжтой болсон','Sync: txn+accs+cats бүгд real-time','Invite link системтэй болсон']}
 ];
@@ -4797,7 +4803,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   // License event bind
   licBindEvents();
   // App version шалгаж кэш цэвэрлэх
-  const APP_VERSION='v1.9';
+  const APP_VERSION='v2.0';
   const savedVersion=localStorage.getItem('app_version');
   if(savedVersion&&savedVersion!==APP_VERSION){
     localStorage.setItem('app_version',APP_VERSION);
