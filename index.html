@@ -2150,7 +2150,7 @@ function renderDashboard(flow){
   // Pie — үндсэн болон дэд ангиллаар
   const pieParents={};
   filteredTXN().forEach(t=>{
-    if(t.type!=='expense'&&!(t.type==='loan_pay'&&(t.fromInterest||0)>0))return;
+    if(t.type!=='expense'&&t.type!=='loan_pay')return;
     const amt=t.type==='loan_pay'?(t.fromInterest||0):t.amt;
     if(!amt)return;
     const rawCat=t.cat||'';
@@ -2657,7 +2657,7 @@ function renderList(){
   const f=filteredTXN().filter(t=>{
     if(curTab==='all')return true;
     if(curTab==='income')return t.type==='income'||t.type==='saving_interest'||t.type==='opening_balance';
-    if(curTab==='expense')return t.type==='expense'||(t.type==='loan_pay'&&(t.fromInterest||0)>0);
+    if(curTab==='expense')return t.type==='expense'||t.type==='loan_pay';
     if(curTab==='saving')return t.type==='saving_in'||t.type==='saving_out'||t.type==='saving_interest';
     if(curTab==='loan')return t.type==='loan_take'||t.type==='loan_pay'||t.type==='loan_interest';
     return true;
@@ -4815,7 +4815,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   // License event bind
   licBindEvents();
   // App version шалгаж кэш цэвэрлэх
-  const APP_VERSION='v2.2';
+  const APP_VERSION='v2.3';
   const savedVersion=localStorage.getItem('app_version');
   if(savedVersion&&savedVersion!==APP_VERSION){
     // Хуучин version — кэш цэвэрлэж шинэ файл татна
