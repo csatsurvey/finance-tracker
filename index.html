@@ -3261,9 +3261,16 @@ function buildModal(){
     if(_recs.length>0){
       h+='<div style="margin-bottom:10px">'+
         '<div style="font-size:11px;font-weight:600;color:var(--tx3);margin-bottom:6px">⚡ Давтагддаг орлогоос сонгох</div>'+
-        '<div style="display:flex;flex-wrap:wrap;gap:6px">'+
-        _recs.map(r=>{const ri=(ACCS.recurring||[]).indexOf(r);return '<button class="acc-toggle" style="padding:6px 12px;font-size:12px" data-ri="'+ri+'" onclick="fillFromRecurring(this.dataset.ri)">'+r.name+' ('+fmt(r.amt)+')</button>';}).join('')+
-        '</div></div>';
+        (_recs.length<=2?
+          '<div style="display:flex;flex-wrap:wrap;gap:6px">'+
+          _recs.map(r=>{const ri=(ACCS.recurring||[]).indexOf(r);return '<button class="acc-toggle" style="padding:6px 12px;font-size:12px" data-ri="'+ri+'" onclick="fillFromRecurring(this.dataset.ri)">'+r.name+' ('+fmt(r.amt)+')</button>';}).join('')+
+          '</div>':
+          '<select class="f-sel" onchange="if(this.value!==\'\')fillFromRecurring(this.value);this.value=\'\'">'+
+          '<option value="">— Сонгох —</option>'+
+          _recs.map(r=>{const ri=(ACCS.recurring||[]).indexOf(r);return '<option value="'+ri+'">'+r.name+' · '+fmt(r.amt)+'</option>';}).join('')+
+          '</select>'
+        )+
+        '</div>';
     }
     h+=catField('income');
     h+=commonFields();
@@ -3274,9 +3281,16 @@ function buildModal(){
     if(_recsE.length>0){
       h+='<div style="margin-bottom:10px">'+
         '<div style="font-size:11px;font-weight:600;color:var(--tx3);margin-bottom:6px">⚡ Давтагддаг зарлагаас сонгох</div>'+
-        '<div style="display:flex;flex-wrap:wrap;gap:6px">'+
-        _recsE.map(r=>{const ri=(ACCS.recurring||[]).indexOf(r);return '<button class="acc-toggle" style="padding:6px 12px;font-size:12px" data-ri="'+ri+'" onclick="fillFromRecurring(this.dataset.ri)">'+r.name+' ('+fmt(r.amt)+')</button>';}).join('')+
-        '</div></div>';
+        (_recsE.length<=2?
+          '<div style="display:flex;flex-wrap:wrap;gap:6px">'+
+          _recsE.map(r=>{const ri=(ACCS.recurring||[]).indexOf(r);return '<button class="acc-toggle" style="padding:6px 12px;font-size:12px" data-ri="'+ri+'" onclick="fillFromRecurring(this.dataset.ri)">'+r.name+' ('+fmt(r.amt)+')</button>';}).join('')+
+          '</div>':
+          '<select class="f-sel" onchange="if(this.value!==\'\')fillFromRecurring(this.value);this.value=\'\'">'+
+          '<option value="">— Сонгох —</option>'+
+          _recsE.map(r=>{const ri=(ACCS.recurring||[]).indexOf(r);return '<option value="'+ri+'">'+r.name+' · '+fmt(r.amt)+'</option>';}).join('')+
+          '</select>'
+        )+
+        '</div>';
     }
     h+=catField('expense');
     h+=commonFields();
