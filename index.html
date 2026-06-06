@@ -658,18 +658,22 @@ body{background:var(--bg);color:var(--tx);font-family:'Sora',sans-serif;font-siz
 
   <!-- ACCOUNT TAB -->
   <div id="mtab-account-content" style="display:none">
+  <!-- Account sub tabs -->
+  <div style="display:flex;gap:0;margin-bottom:14px;border-radius:12px;overflow:hidden;border:1.5px solid var(--bd)">
+    <button id="acc-tab-loan" onclick="setAccSubTab('loan')" style="flex:1;padding:11px 8px;border:none;background:var(--bl);color:#fff;font-family:Sora,sans-serif;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">🏦 Зээл</button>
+    <button id="acc-tab-sav" onclick="setAccSubTab('sav')" style="flex:1;padding:11px 8px;border:none;background:var(--sur);color:var(--tx2);font-family:Sora,sans-serif;font-size:13px;font-weight:600;cursor:pointer;border-left:1.5px solid var(--bd);display:flex;align-items:center;justify-content:center;gap:6px">💎 Хадгаламж</button>
+  </div>
+
   <div class="dash-card" id="nw-chart-section" style="margin-bottom:14px;display:none">
     <div class="dc-title">📈 Цэвэр хөрөнгийн өсөлт</div>
     <div style="height:160px"><canvas id="nw-chart"></canvas></div>
   </div>
-  <div class="acc-breakdown" id="loan-section" style="display:none">
-    <div class="ab-head">🏦 Зээлийн данснууд</div>
+  <div class="acc-breakdown" id="loan-section">
     <div id="loan-cards"></div>
   </div>
 
   <!-- Saving breakdown -->
   <div class="acc-breakdown" id="sav-section" style="display:none">
-    <div class="ab-head">💎 Хадгаламжийн данснууд</div>
     <div id="sav-cards"></div>
   </div>
 
@@ -2608,13 +2612,33 @@ function setMainTab(tab,btn){
   document.getElementById('mtab-report-content').style.display=tab==='report'?'block':'none';
   document.getElementById('mtab-account-content').style.display=tab==='account'?'block':'none';
   if(tab==='report'){const flow=calcFlow();renderDashboard(flow);}
-  if(tab==='account'){if(ACCS){const bal=calcBal();renderLoanCards(bal);renderSavCards(bal);}}
+  if(tab==='account'){if(ACCS){const bal=calcBal();renderLoanCards(bal);renderSavCards(bal);setAccSubTab(curAccSubTab);}}
   if(tab==='txn'){
     // Бичилт tab нээхэд энэ сарын шүүлт автоматаар идэвхждэг
     if(dfMode==='all'){
       setDf('month',document.querySelector('.df-pill'));
     }
     renderList();
+  }
+}
+
+let curAccSubTab='loan';
+function setAccSubTab(tab){
+  curAccSubTab=tab;
+  const loanBtn=document.getElementById('acc-tab-loan');
+  const savBtn=document.getElementById('acc-tab-sav');
+  const loanSec=document.getElementById('loan-section');
+  const savSec=document.getElementById('sav-section');
+  if(tab==='loan'){
+    if(loanBtn){loanBtn.style.background='var(--bl)';loanBtn.style.color='#fff';}
+    if(savBtn){savBtn.style.background='var(--sur)';savBtn.style.color='var(--tx2)';}
+    if(loanSec)loanSec.style.display='block';
+    if(savSec)savSec.style.display='none';
+  } else {
+    if(savBtn){savBtn.style.background='var(--bl)';savBtn.style.color='#fff';}
+    if(loanBtn){loanBtn.style.background='var(--sur)';loanBtn.style.color='var(--tx2)';}
+    if(savSec)savSec.style.display='block';
+    if(loanSec)loanSec.style.display='none';
   }
 }
 
@@ -4815,7 +4839,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   // License event bind
   licBindEvents();
   // App version шалгаж кэш цэвэрлэх
-  const APP_VERSION='v2.3';
+  const APP_VERSION='v2.4';
   const savedVersion=localStorage.getItem('app_version');
   if(savedVersion&&savedVersion!==APP_VERSION){
     // Хуучин version — кэш цэвэрлэж шинэ файл татна
