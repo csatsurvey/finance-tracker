@@ -2391,17 +2391,28 @@ function autoCalcInterests(){
   const bal=calcBal();
   const added=[];
 
-  // Хадгаламжийн хүү — TXN-д аль хэдийн байвал нэмэхгүй
+  // Хадгаламжийн хүү — хугацаа дуусаж байж л нэмнэ
+  const today=nowDate();
   ACCS.savings.forEach(sv=>{
-    if(!sv.rate)return;
-    if(TXN.some(t=>t.type==='saving_interest'&&t.savingId===sv.id&&(t.date||'').slice(0,7)===curMo))return;
+    if(!sv.rate||!sv.months)return;
+    // Хугацаа дуусах огноо: createdAt + months сар
+    const created=new Date(sv.createdAt||today);
+    const maturity=new Date(created);
+    maturity.setMonth(maturity.getMonth()+parseInt(sv.months||0));
+    const maturityStr=maturity.toISOString().slice(0,10);
+    // Өнөөдөр хугацаа дуусах өдөр эсвэл түүнээс хойш байвал л хүү нэмнэ
+    if(today<maturityStr)return;
+    // Аль хэдийн нэмсэн эсэх шалга (хугацааны огноогоор)
+    const matMo=maturityStr.slice(0,7);
+    if(TXN.some(t=>t.type==='saving_interest'&&t.savingId===sv.id&&(t.date||'').slice(0,7)===matMo))return;
     const sb=bal.savings[sv.id]||0;
     if(sb<=0)return;
-    const interest=Math.round(sb*sv.rate/100);
+    // Нийт хүү = үлдэгдэл × хувь × сар
+    const interest=Math.round(sb*(sv.rate/100)*sv.months);
     if(interest<=0)return;
     TXN.unshift({id:uid(),type:'saving_interest',amt:interest,
-      date:nowDate(),datetime:nowDateTime(),
-      desc:sv.name+' '+curMo+' хүү',savingId:sv.id,cat:'Хадгаламжийн хүү',_auto:true});
+      date:maturityStr,datetime:maturityStr+'T00:00',
+      desc:sv.name+' '+sv.months+'с хүү',savingId:sv.id,cat:'Хадгаламжийн хүү',_auto:true});
     added.push(sv.name+' +'+fmt(interest));
   });
 
@@ -4839,7 +4850,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   // License event bind
   licBindEvents();
   // App version шалгаж кэш цэвэрлэх
-  const APP_VERSION='v2.4';
+  const APP_VERSION='v2.5';
   const savedVersion=localStorage.getItem('app_version');
   if(savedVersion&&savedVersion!==APP_VERSION){
     // Хуучин version — кэш цэвэрлэж шинэ файл татна
