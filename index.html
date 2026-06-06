@@ -709,11 +709,8 @@ body{background:var(--bg);color:var(--tx);font-family:'Sora',sans-serif;font-siz
     <button class="tb on" id="tab-all" onclick="setTab('all',this)">Бүгд</button>
     <button class="tb" id="tab-income" onclick="setTab('income',this)">Орлого</button>
     <button class="tb" id="tab-expense" onclick="setTab('expense',this)">Зарлага</button>
-    <button class="tb tb-more" id="tab-more-btn" onclick="event.stopPropagation();toggleMoreTabs(this)">⋯ Дэлгэрэнгүй</button>
-    <div class="tab-more-menu" id="tab-more-menu" style="display:none">
-      <button class="tb-menu-item" onclick="setTab('saving',document.getElementById('tab-all'));closeMoreTabs()">💎 Хадгаламж</button>
-      <button class="tb-menu-item" onclick="setTab('loan',document.getElementById('tab-all'));closeMoreTabs()">🏦 Зээл</button>
-    </div>
+    <button class="tb" onclick="setTab('saving',this)">💎 Хадгаламж</button>
+    <button class="tb" onclick="setTab('loan',this)">🏦 Зээл</button>
   </div>
   <div class="txn-list" id="txn-list"></div>
   </div><!-- end TXN TAB -->
@@ -4273,7 +4270,7 @@ function fillFromRecurring(ri){
 // REFRESH + CHANGELOG
 // ═══════════════════════════════════════════════════
 const CHANGELOG=[
-  {ver:'2.0',date:'2026-06-06',items:['🏠 4 tab layout — Нүүр/Бичилт/Тайлан/Данс','📋 Бичилт tab энэ сарыг автоматаар харуулна','🔢 10+ бичилт бол дэлгэрэнгүй товч','⚡ Зээлийн хүү зарлагад буруу орж байсан засагдлаа','🔄 Давтагддаг 3+ бол dropdown болно']},
+  {ver:'2.2',date:'2026-06-06',items:['🏠 4 tab layout — Нүүр/Бичилт/Тайлан/Данс','📋 Бичилт tab автоматаар шинэчлэгдэнэ','⚡ Зээлийн хүү засагдлаа','🔄 Давтагддаг 3+ dropdown болно','🔧 Bottom nav бүтэн өргөнтэй болсон']},
   {ver:'1.5',date:'2026-06-04',items:['Давтагддаг бичилтэд ангилал нэмэгдлээ','PDF/Excel/Word утсанд preview харагдана','Лицензийн flash засагдлаа']},
   {ver:'1.4',date:'2026-06-03',items:['iOS/Android PWA суулгах боломжтой болсон','Sync: txn+accs+cats бүгд real-time','Invite link системтэй болсон']}
 ];
