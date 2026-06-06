@@ -78,7 +78,7 @@ body{background:var(--bg);color:var(--tx);font-family:'Sora',sans-serif;font-siz
 
 /* APP */
 #s-app{flex-direction:column;background:var(--bg);}
-.aw{max-width:960px;margin:0 auto;width:100%;padding:0 16px 100px;padding-bottom:calc(100px + env(safe-area-inset-bottom));}
+.aw{max-width:960px;margin:0 auto;width:100%;padding:0 16px;padding-bottom:calc(80px + env(safe-area-inset-bottom));}
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 0 12px;}
 .topbar-logo{font-family:'Playfair Display',serif;font-size:20px;}@media(max-width:380px){.topbar-logo{font-size:16px;}}
 .topbar-logo em{color:var(--bl);font-style:italic;}
@@ -336,7 +336,20 @@ body{background:var(--bg);color:var(--tx);font-family:'Sora',sans-serif;font-siz
 .cat-add-btn{padding:8px 14px;border-radius:var(--r);border:none;background:var(--bl);color:#fff;font-size:12px;cursor:pointer;font-family:'Sora',sans-serif;font-weight:500;}
 
 /* FAB */
-.fab-wrap{position:fixed;bottom:max(22px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:100;display:none;pointer-events:none;gap:10px;}
+.fab-wrap{position:fixed;bottom:0;left:0;right:0;z-index:100;display:none;pointer-events:none;}
+.fab-wrap.on{display:block;pointer-events:auto;}
+.bottom-nav{display:flex;align-items:center;justify-content:space-around;background:var(--sur);border-top:1px solid var(--bd);padding:8px 8px calc(8px + env(safe-area-inset-bottom));box-shadow:0 -4px 20px rgba(0,0,0,.08);}
+.bn-item{display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;cursor:pointer;padding:6px 12px;border-radius:10px;font-family:Sora,sans-serif;color:var(--tx2);transition:all .15s;}
+.bn-item:hover,.bn-item:active{background:var(--sur2);color:var(--bl);}
+.bn-ico{font-size:20px;line-height:1;}
+.bn-lbl{font-size:10px;font-weight:600;white-space:nowrap;}
+.bn-add{width:52px;height:52px;border-radius:50%;background:var(--bl);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 4px 16px rgba(37,99,235,.4);font-size:28px;font-weight:300;margin-top:-16px;transition:all .15s;}
+.bn-add:hover{background:var(--bl2);transform:translateY(-2px);}
+.tab-more-menu{position:absolute;bottom:100%;right:0;background:var(--sur);border:1.5px solid var(--bd);border-radius:12px;padding:6px;box-shadow:0 4px 20px rgba(0,0,0,.12);z-index:200;min-width:140px;}
+.tb-menu-item{display:block;width:100%;text-align:left;padding:10px 14px;background:none;border:none;font-family:Sora,sans-serif;font-size:13px;font-weight:600;color:var(--tx);cursor:pointer;border-radius:8px;}
+.tb-menu-item:hover{background:var(--sur2);}
+.tb-more{position:relative;}
+.txn-tab-wrap{position:relative;}
 .fab-wrap.on{display:flex;pointer-events:auto;}
 .fab{display:flex;align-items:center;gap:8px;color:#fff;border:none;border-radius:26px;padding:13px 26px;font-size:14px;font-weight:600;font-family:'Sora',sans-serif;cursor:pointer;transition:all .15s;}
 .fab.main{background:var(--bl);box-shadow:0 4px 20px rgba(37,99,235,.4);}
@@ -491,7 +504,7 @@ body{background:var(--bg);color:var(--tx);font-family:'Sora',sans-serif;font-siz
     <div class="topbar-logo">Миний <em>Санхүү</em></div>
     <div class="topbar-r">
       <div class="chip" id="app-uname"></div>
-      <button class="btn-sm" onclick="confirmGoHome()">Гарах</button>
+
     </div>
   </div>
 
@@ -665,11 +678,14 @@ body{background:var(--bg);color:var(--tx);font-family:'Sora',sans-serif;font-siz
   </div>
   <!-- Txn tabs -->
   <div class="tabs">
-    <button class="tb on" onclick="setTab('all',this)">Бүгд</button>
-    <button class="tb" onclick="setTab('income',this)">Орлого</button>
-    <button class="tb" onclick="setTab('expense',this)">Зарлага</button>
-    <button class="tb" onclick="setTab('saving',this)">Хадгаламж</button>
-    <button class="tb" onclick="setTab('loan',this)">Зээл</button>
+    <button class="tb on" id="tab-all" onclick="setTab('all',this)">Бүгд</button>
+    <button class="tb" id="tab-income" onclick="setTab('income',this)">Орлого</button>
+    <button class="tb" id="tab-expense" onclick="setTab('expense',this)">Зарлага</button>
+    <button class="tb tb-more" id="tab-more-btn" onclick="toggleMoreTabs(this)">⋯ Дэлгэрэнгүй</button>
+    <div class="tab-more-menu" id="tab-more-menu" style="display:none">
+      <button class="tb-menu-item" onclick="setTab('saving',document.getElementById('tab-all'));closeMoreTabs()">💎 Хадгаламж</button>
+      <button class="tb-menu-item" onclick="setTab('loan',document.getElementById('tab-all'));closeMoreTabs()">🏦 Зээл</button>
+    </div>
   </div>
   <div class="txn-list" id="txn-list"></div>
  </div>
@@ -776,10 +792,27 @@ body{background:var(--bg);color:var(--tx);font-family:'Sora',sans-serif;font-siz
 </div>
 
 <div class="fab-wrap" id="fab-wrap">
-  <button class="fab sec" onclick="doRefresh()" style="padding:13px 16px;font-size:13px;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.3)" title="Шинэчлэх">🔄</button>
-      <button class="fab sec" onclick="openMgr()" style="padding:13px 16px;font-size:13px">⚙️</button>
-  <button class="fab sec" onclick="openAccModal()">⊕ Данс</button>
-  <button class="fab main" onclick="openModal()">+ Бичилт</button>
+  <nav class="bottom-nav" id="bottom-nav">
+    <button class="bn-item" onclick="doRefresh()" title="Шинэчлэх">
+      <span class="bn-ico">🔄</span>
+      <span class="bn-lbl">Шинэчлэх</span>
+    </button>
+    <button class="bn-item" onclick="openMgr()">
+      <span class="bn-ico">⚙️</span>
+      <span class="bn-lbl">Тохиргоо</span>
+    </button>
+    <button class="bn-add" onclick="openModal()">
+      <span style="font-size:24px;line-height:1">+</span>
+    </button>
+    <button class="bn-item" onclick="openAccModal()">
+      <span class="bn-ico">🏦</span>
+      <span class="bn-lbl">Данс</span>
+    </button>
+    <button class="bn-item" onclick="confirmGoHome()">
+      <span class="bn-ico">🚪</span>
+      <span class="bn-lbl">Гарах</span>
+    </button>
+  </nav>
 </div>
 <div class="toast" id="toast"></div>
 <div class="htip" id="htip"></div>
@@ -2536,6 +2569,25 @@ const TM={
   transfer:      {ico:'🔄',lbl:'Шилжүүлэг',          col:'var(--bl)',sign:''},
   opening_balance:{ico:'⚖️',lbl:'Эхлэлийн үлдэгдэл',col:'var(--bl)',sign:'+'},
 };
+
+function toggleMoreTabs(btn){
+  const menu=document.getElementById('tab-more-menu');
+  if(menu.style.display==='none'){
+    menu.style.display='block';
+    setTimeout(()=>document.addEventListener('click',closeMoreTabsOutside,{once:true}),0);
+  } else {
+    menu.style.display='none';
+  }
+}
+function closeMoreTabs(){
+  const menu=document.getElementById('tab-more-menu');
+  if(menu)menu.style.display='none';
+}
+function closeMoreTabsOutside(e){
+  const menu=document.getElementById('tab-more-menu');
+  const btn=document.getElementById('tab-more-btn');
+  if(menu&&btn&&!btn.contains(e.target))menu.style.display='none';
+}
 
 function setTab(tab,btn){
   curTab=tab;
