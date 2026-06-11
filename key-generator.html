@@ -137,11 +137,12 @@ input:focus,select:focus{border-color:#1e40af;}
 const FB_URL='https://finance-tracker-ca269-default-rtdb.firebaseio.com';
 let db, allKeys={}, curFilter='all', currentRaw='';
 
+// Firebase init — auth хүлээхгүй, шууд data ачаална
 try{
-  const app=firebase.apps.length?firebase.apps[0]:firebase.initializeApp({databaseURL:FB_URL},'admin2');
-  db=firebase.database(app);
+  const _app=firebase.apps.length?firebase.apps[0]:firebase.initializeApp({databaseURL:FB_URL},'admin2');
+  db=firebase.database(_app);
 }catch(e){
-  try{db=firebase.database(firebase.app('admin2'));}catch(e2){console.error(e2);}
+  try{db=firebase.database(firebase.app('admin2'));}catch(e2){console.error('Firebase init алдаа:',e2);}
 }
 
 function uid(){
@@ -320,20 +321,29 @@ async function linkUser(){
 }
 
 async function loadKeys(){
-  const snap=await db.ref('keys').once('value');
-  allKeys=snap.val()||{};
-  const today=new Date().toISOString().slice(0,10);
-  for(const [raw,d] of Object.entries(allKeys)){
-    if(d.status==='trial'&&d.trialExp&&d.trialExp<today){
-      await db.ref('keys/'+raw).update({status:'blocked',active:false});
-      allKeys[raw].status='blocked';allKeys[raw].active=false;
+  try{
+    const snap=await db.ref('keys').once('value');
+    allKeys=snap.val()||{};
+    const today=new Date().toISOString().slice(0,10);
+    for(const [raw,d] of Object.entries(allKeys)){
+      if(d.status==='trial'&&d.trialExp&&d.trialExp<today){
+        await db.ref('keys/'+raw).update({status:'blocked',active:false});
+        allKeys[raw].status='blocked';allKeys[raw].active=false;
+      }
     }
+    const vals=Object.values(allKeys);
+    document.getElementById('s-total').textContent=vals.length;
+    document.getElementById('s-paid').textContent=vals.filter(function(d){return d.status==='paid';}).length;
+    document.getElementById('s-blocked').textContent=vals.filter(function(d){return d.status==='blocked';}).length;
+    renderKeys();
+  }catch(err){
+    console.error('loadKeys error:',err);
+    document.getElementById('key-list').innerHTML=
+      '<div style="color:#dc2626;font-size:13px;padding:12px">⚠️ Түлхүүр татахад алдаа гарлаа. Хуудсыг дахин ачаалаарай.</div>';
+    document.getElementById('s-total').textContent='—';
+    document.getElementById('s-paid').textContent='—';
+    document.getElementById('s-blocked').textContent='—';
   }
-  const vals=Object.values(allKeys);
-  document.getElementById('s-total').textContent=vals.length;
-  document.getElementById('s-paid').textContent=vals.filter(function(d){return d.status==='paid';}).length;
-  document.getElementById('s-blocked').textContent=vals.filter(function(d){return d.status==='blocked';}).length;
-  renderKeys();
 }
 
 function renderKeys(){
@@ -381,6 +391,7 @@ function renderKeys(){
 }
 
 async function loadFeedback(){
+  try{
   const snap=await db.ref('feedback').once('value');
   const data=snap.val()||{};
   const el=document.getElementById('fb-list');
@@ -399,6 +410,11 @@ async function loadFeedback(){
       '<div class="fb-contact">👤 '+(d.user||'unknown')+'</div>'+
     '</div>';
   }).join('');
+  }catch(err){
+    console.error('loadFeedback error:',err);
+    document.getElementById('fb-list').innerHTML=
+      '<div style="color:#dc2626;font-size:13px;padding:12px">⚠️ Санал хүсэлт татахад алдаа гарлаа.</div>';
+  }
 }
 
 loadKeys();
