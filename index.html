@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Миний Санхүү">
   <meta name="theme-color" content="#1e40af">
-  <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22%D0%9C%D0%B8%D0%BD%D0%B8%D0%B9%20%D0%A1%D0%B0%D0%BD%D1%85%D2%AF%D2%AF%22%2C%22short_name%22%3A%22%D0%9C%D0%A1%22%2C%22description%22%3A%22%D0%A5%D1%83%D0%B2%D0%B8%D0%B9%D0%BD%20%D1%81%D0%B0%D0%BD%D1%85%D2%AF%D2%AF%D0%B3%D0%B8%D0%B9%D0%BD%20%D0%B1%D2%AF%D1%80%D1%82%D0%B3%D1%8D%D0%BB%22%2C%22start_url%22%3A%22%2Ffinance-tracker%2F%22%2C%22scope%22%3A%22%2Ffinance-tracker%2F%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%231e40af%22%2C%22theme_color%22%3A%22%231e40af%22%2C%22orientation%22%3A%22portrait%22%2C%22lang%22%3A%22mn%22%2C%22prefer_related_applications%22%3Afalse%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%2C%253Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20192%20192%27%253E%253Crect%20width%3D%27192%27%20height%3D%27192%27%20rx%3D%2732%27%20fill%3D%27%25231e40af%27%2F%253E%253Ctext%20x%3D%2796%27%20y%3D%27130%27%20font-size%3D%27100%27%20text-anchor%3D%27middle%27%20font-family%3D%27serif%27%253E%25F0%259F%2592%25B0%253C%2Ftext%253E%253C%2Fsvg%253E%22%2C%22sizes%22%3A%22192x192%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%2C%22purpose%22%3A%22any%22%7D%2C%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%2C%253Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20512%20512%27%253E%253Crect%20width%3D%27512%27%20height%3D%27512%27%20rx%3D%2780%27%20fill%3D%27%25231e40af%27%2F%253E%253Ctext%20x%3D%27256%27%20y%3D%27340%27%20font-size%3D%27260%27%20text-anchor%3D%27middle%27%20font-family%3D%27serif%27%253E%25F0%259F%2592%25B0%253C%2Ftext%253E%253C%2Fsvg%253E%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%2C%22purpose%22%3A%22maskable%20any%22%7D%5D%7D">
+  <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.svg">
 <title>Миний Санхүү</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
@@ -7161,6 +7161,7 @@ function fillFromRecurring(ri){
 // REFRESH + CHANGELOG
 // ═══════════════════════════════════════════════════
 const CHANGELOG=[
+  {ver:'5.61',date:'2026-06-12',items:['🍎 iOS PWA 404 засагдлаа: manifest.json+sw.js жинхэнэ файлаас уншина']},
   {ver:'5.60',date:'2026-06-12',items:['🍎 iOS PWA: manifest start_url=/finance-tracker/ (404 засагдлаа)']},
   {ver:'5.59',date:'2026-06-12',items:['📦 manifest.json + sw.js inline — нэг файл (index.html) л upload хийхэд хангалттай']},
   {ver:'5.58',date:'2026-06-12',items:['📲 PWA: Service Worker бүртгэх (unregister биш), Android install prompt, iOS заавар']},
@@ -7772,32 +7773,12 @@ function dlBlob(blob,name){
 }
 
 window.addEventListener('DOMContentLoaded',()=>{
-  // Service Worker бүртгэх — inline blob аргаар (sw.js файл шаардахгүй)
+  // Service Worker — жинхэнэ ./sw.js файлаас бүртгэнэ
   if('serviceWorker' in navigator){
-    // SW кодыг Blob болгож same-origin scope-той бүртгэх
-    // Chrome 93+ нь blob: URL-д {scope} override зөвшөөрдөг
-    const _swCode=`self.addEventListener('install',e=>self.skipWaiting());
-self.addEventListener('activate',e=>e.waitUntil(clients.claim()));
-self.addEventListener('fetch',e=>{
-  if(e.request.mode==='navigate'){
-    e.respondWith(fetch(e.request).catch(()=>new Response(
-      '<html><body style="font-family:sans-serif;text-align:center;padding:60px;color:#1e3a5f"><h2>📵 Интернэт холбоогүй</h2><p>Интернэт холбоогоо шалгаад дахин оролдоно уу.</p></body></html>',
-      {headers:{'Content-Type':'text/html'}}
-    )));
-  } else {
-    e.respondWith(fetch(e.request));
+    navigator.serviceWorker.register('./sw.js',{scope:'./'})
+      .then(()=>{}).catch(()=>{});
   }
-});`;
-    const _swBlob=new Blob([_swCode],{type:'application/javascript'});
-    const _swUrl=URL.createObjectURL(_swBlob);
-    navigator.serviceWorker.register(_swUrl)
-      .then(()=>{URL.revokeObjectURL(_swUrl);})
-      .catch(()=>{
-        // Blob scope алдааны үед /sw.js файл ашиглана (fallback)
-        navigator.serviceWorker.register('/sw.js').catch(()=>{});
-      });
-  }
-  // PWA install prompt handler
+    // PWA install prompt handler
   window.addEventListener('beforeinstallprompt', e => {
     e.preventDefault();
     window._pwaPrompt = e;
@@ -7811,7 +7792,7 @@ self.addEventListener('fetch',e=>{
   // License event bind
   licBindEvents();
   // App version шалгаж кэш цэвэрлэх
-  const APP_VERSION='v5.60';
+  const APP_VERSION='v5.61';
   const savedVersion=localStorage.getItem('app_version');
   if(savedVersion&&savedVersion!==APP_VERSION){
     // Хуучин version — кэш цэвэрлэж шинэ файл татна
