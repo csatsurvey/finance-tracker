@@ -2,14 +2,14 @@
   "name": "Миний Санхүү",
   "short_name": "МС",
   "description": "Хувийн санхүүгийн бүртгэл",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": "/finance-tracker/",
+  "scope": "/finance-tracker/",
   "display": "standalone",
   "background_color": "#1e40af",
   "theme_color": "#1e40af",
   "orientation": "portrait",
   "lang": "mn",
-  "categories": ["finance", "productivity"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "icon-192.svg",
@@ -21,9 +21,7 @@
       "src": "icon-192.svg",
       "sizes": "512x512",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "maskable any"
     }
-  ],
-  "screenshots": [],
-  "prefer_related_applications": false
+  ]
 }
