@@ -469,16 +469,30 @@ body{background:var(--bg);color:var(--tx);font-family:'Sora',sans-serif;font-siz
   <div class="lic-box">
     <div class="lic-logo">Миний <em>Санхүү</em></div>
     <div class="lic-sub">Хувийн санхүүгийн бүртгэл</div>
-    <div class="lic-lbl">Лицензийн түлхүүр</div>
-    <input class="lic-in" id="lic-input" type="text" placeholder="XXXX-XXXX-XXXX"
-      maxlength="20" autocomplete="off" spellcheck="false">
-    <button class="lic-btn" id="lic-btn">Нэвтрэх →</button>
-    <div class="lic-err" id="lic-err"></div>
-    <div class="lic-ok" id="lic-ok"></div>
-    <div class="lic-note">
-      Та лицензийн түлхүүрээ худалдан авалтынхаа дараа авсан байна.<br>
-      Асуулт байвал холбогдоно уу.
+
+    <!-- Сонголт: Шинэ / Хуучин -->
+    <div id="lic-choice" style="display:flex;flex-direction:column;gap:10px;width:100%;margin-top:8px">
+      <button class="lic-btn" style="background:var(--bl)" onclick="licChoose('existing')">
+        👤 Хуучин хэрэглэгч нэвтрэх
+      </button>
+      <button class="lic-btn" style="background:#16a34a" onclick="licChoose('new')">
+        ✨ Шинэ хэрэглэгч бүртгүүлэх
+      </button>
     </div>
+
+    <!-- Key оруулах хэсэг (сонголтын дараа харагдана) -->
+    <div id="lic-key-section" style="display:none;width:100%">
+      <div id="lic-mode-label" class="lic-lbl" style="text-align:center;margin-bottom:6px"></div>
+      <div class="lic-lbl">Лицензийн түлхүүр</div>
+      <input class="lic-in" id="lic-input" type="text" placeholder="XXXX-XXXX-XXXX"
+        maxlength="20" autocomplete="off" spellcheck="false">
+      <button class="lic-btn" id="lic-btn">Нэвтрэх →</button>
+      <div class="lic-err" id="lic-err"></div>
+      <div class="lic-ok" id="lic-ok"></div>
+      <button class="lnk" onclick="licBackToChoice()" style="margin-top:8px;display:block;text-align:center;width:100%">← Буцах</button>
+    </div>
+
+    <div class="lic-note">Асуулт байвал 96443322 утсаар холбогдоно уу.</div>
   </div>
 </div>
 
@@ -487,7 +501,12 @@ body{background:var(--bg);color:var(--tx);font-family:'Sora',sans-serif;font-siz
   <div class="home-logo">Миний <em>Санхүү</em></div>
   <div class="home-sub">Хувийн санхүүгийн бүртгэл</div>
   <div class="ul" id="user-list"></div>
-  <!-- Шинэ хэрэглэгч товч хасагдсан — зөвхөн key-generator дээрээс үүсгэнэ -->
+  <div id="new-user-area" style="display:none;text-align:center;margin-top:8px">
+    <button class="lnk" onclick="gotoNewUser()">+ Шинэ хэрэглэгч нэмэх</button>
+  </div>
+  <div id="back-to-lic" style="text-align:center;margin-top:4px">
+    <button class="lnk" onclick="goHome()">← Буцах</button>
+  </div>
 </div>
 
 <!-- PIN -->
@@ -582,6 +601,9 @@ body{background:var(--bg);color:var(--tx);font-family:'Sora',sans-serif;font-siz
       <label>Лицензийн түлхүүр</label>
       <input id="sk" type="text" placeholder="XXXX-XXXX-XXXX" oninput="this.value=this.value.replace(/[^a-zA-Z0-9]/g,'').toUpperCase().slice(0,12).replace(/(.{4})/g,'$1-').replace(/-$/,'')">
     </div>
+    <div id="sk-validated-note" style="display:none;background:var(--sur2);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--tx3)">
+      🔑 Лицензийн түлхүүр баталгаажсан
+    </div>
     <div class="fld">
       <label>Нэвтрэх нэр <span style="font-weight:400;color:var(--tx3);font-size:11px">— апп дотор харагдах таны нэр</span></label>
       <input id="sn" type="text" placeholder="Болд, Халиун...">
@@ -613,7 +635,9 @@ body{background:var(--bg);color:var(--tx);font-family:'Sora',sans-serif;font-siz
     </div>
     <div class="ferr" id="serr"></div>
     <button class="btn-main" onclick="doSetup()">→ Эхлэх</button>
-    <div style="text-align:center"><button class="lnk" onclick="goHome()">← Буцах</button></div>
+    <div style="text-align:center">
+      <button class="lnk" onclick="resetSetupToUserList()">← Буцах</button>
+    </div>
   </div>
 </div>
 
@@ -1291,6 +1315,13 @@ function licInit(){
       const uSnap=await fbDb.ref(VER+'/users').once('value');
       const allUsers=uSnap.val()||[];
       const myUsers=allUsers.filter(u=>linked.includes(u.username));
+      if(_licMode==='new'){
+        // ── ШИНЭ горим: ЗААВАЛ registration form, хуучин user шалгахгүй ──
+        _prefillSetupKey(raw);
+        scrShow('s-setup');
+        return;
+      }
+      // ── ХУУЧИН горим: existing users хайна ──
       if(myUsers.length>0){
         localStorage.setItem(UK,JSON.stringify(myUsers));
         document.getElementById('s-home').style.display='flex';
@@ -1299,15 +1330,22 @@ function licInit(){
         return;
       }
     }
-    // linkedUsers байхгүй — localStorage-аас хэрэглэгч хайх
-    const localU=JSON.parse(localStorage.getItem(UK)||'[]');
-    if(localU.length>0){
-      // localStorage-д хэрэглэгч байна — s-home харуулна
-      document.getElementById('s-home').style.display='flex';
-      document.getElementById('s-home').classList.add('on');
-      renderHome();
-    } else {
+    // linkedUsers байхгүй
+    if(_licMode==='new'){
+      // Шинэ горим — заавал registration
+      _prefillSetupKey(raw);
       scrShow('s-setup');
+    } else {
+      // Хуучин горим — хэрэглэгч олдсонгүй
+      const localU=JSON.parse(localStorage.getItem(UK)||'[]');
+      if(localU.length>0){
+        document.getElementById('s-home').style.display='flex';
+        document.getElementById('s-home').classList.add('on');
+        renderHome();
+      } else {
+        licShowErr('⚠️ Энэ түлхүүрт бүртгэлтэй хэрэглэгч байхгүй байна.\nШинэ хэрэглэгч бүртгүүлэх сонгоно уу.');
+        btn.disabled=false; btn.textContent='Нэвтрэх →';
+      }
     }
   }).catch(function(){
     // Firebase алдаа — localStorage-аас харуулна
@@ -1472,6 +1510,28 @@ function _showInstallHint() {
 function licShowErr(m){document.getElementById('lic-err').textContent=m;document.getElementById('lic-err').style.display='block';document.getElementById('lic-ok').style.display='none';}
 function licShowOk(m){document.getElementById('lic-ok').textContent=m;document.getElementById('lic-ok').style.display='block';document.getElementById('lic-err').style.display='none';}
 function licHideMsg(){document.getElementById('lic-err').style.display='none';document.getElementById('lic-ok').style.display='none';}
+
+// Шинэ/Хуучин сонголтын logic
+let _licMode = 'existing'; // 'existing' | 'new'
+
+function licChoose(mode){
+  _licMode = mode;
+  document.getElementById('lic-choice').style.display = 'none';
+  document.getElementById('lic-key-section').style.display = 'block';
+  const lbl = document.getElementById('lic-mode-label');
+  if(lbl){
+    lbl.textContent = mode==='new' ? '✨ Шинэ хэрэглэгч бүртгүүлэх' : '👤 Хуучин хэрэглэгч нэвтрэх';
+    lbl.style.color = mode==='new' ? '#16a34a' : 'var(--bl)';
+  }
+  setTimeout(()=>{ const inp=document.getElementById('lic-input'); if(inp)inp.focus(); },100);
+}
+
+function licBackToChoice(){
+  document.getElementById('lic-choice').style.display = 'flex';
+  document.getElementById('lic-key-section').style.display = 'none';
+  document.getElementById('lic-err').textContent = '';
+  document.getElementById('lic-err').style.display = 'none';
+}
 
 function licBindEvents(){
   const inp=document.getElementById('lic-input');
@@ -2011,21 +2071,54 @@ function goHome(){
 
 function renderHome(){
   const us=gU();
-  document.getElementById('user-list').innerHTML=us.map(u=>
+  const ul=document.getElementById('user-list');
+  const nua=document.getElementById('new-user-area');
+  const backLic=document.getElementById('back-to-lic');
+  if(!us||us.length===0){scrShow('s-setup');return;}
+  if(us.length===1){
+    const u=us[0];
+    ul.innerHTML='<div style="text-align:center;padding:16px 0 8px">'+
+      '<div style="width:64px;height:64px;border-radius:50%;background:var(--bl);color:#fff;font-size:24px;font-weight:700;display:flex;align-items:center;justify-content:center;margin:0 auto 10px">'+
+        u.displayName[0].toUpperCase()+
+      '</div>'+
+      '<div style="font-size:17px;font-weight:600">Сайн уу, '+u.displayName+'!</div>'+
+      '<div style="font-size:13px;color:var(--tx3);margin-top:4px">PIN кодоо оруулна уу...</div>'+
+    '</div>';
+    if(nua)nua.style.display='none';
+    if(backLic)backLic.style.display='block';
+    setTimeout(()=>{goPin(u.username);},900);
+    return;
+  }
+  ul.innerHTML=us.map(u=>
     '<div class="uc" onclick="goPin(\''+u.username+'\')">'+
     '<div><div class="uc-nm">'+u.displayName+'</div><div class="uc-h">#'+u.username+'</div></div>'+
     '<span style="color:var(--tx3);font-size:20px">›</span></div>'
   ).join('');
-  const nub=document.getElementById('new-user-btn');if(nub)nub.style.display='none';
+  if(nua)nua.style.display='block';
+  if(backLic)backLic.style.display='block';
 }
-// ── EmailJS PIN Reset ─────────────────────────────────────
-const EMAILJS_PK      = 't7Vk6mmTSR_1-Uvz5';
-const EMAILJS_SVC     = 'service_k1351ym';
-const EMAILJS_TPL     = 'template_e7e5osa';
-let pfResetUsername   = null; // username of user being reset
-let pfResetCode       = null; // 6-digit code stored in memory
-let pfNewPinBuf       = '';
+function _prefillSetupKey(raw){
+  // Setup form-д key pre-fill хийж, key талбарыг нуух
+  const _sk=document.getElementById('sk');
+  const _skw=document.getElementById('sk-wrap');
+  const _skn=document.getElementById('sk-validated-note');
+  if(_sk) _sk.value = raw.match(/.{1,4}/g).join('-');
+  if(_skw) _skw.style.display='none';
+  if(_skn) _skn.style.display='block';
+}
 
+function gotoNewUser(){
+  const key=localStorage.getItem('lic_key')||'';
+  const skWrap=document.getElementById('sk-wrap');
+  const skInput=document.getElementById('sk');
+  const skNote=document.getElementById('sk-validated-note');
+  if(key&&skInput){
+    skInput.value=key.match(/.{1,4}/g).join('-');
+    if(skWrap)skWrap.style.display='none';
+    if(skNote)skNote.style.display='block';
+  }
+  scrShow('s-setup');
+}
 function showPinForgot(){
   // Show email input screen; pre-fill if we know current user
   document.getElementById('pf-email').value = '';
@@ -2241,6 +2334,17 @@ async function saveNewPin(){
     console.error('[PIN RESET] error:',e);
     showErr('Алдаа: '+e.message);
   }
+}
+
+function resetSetupToUserList(){
+  // Key талбарыг дахин харуулах (бусад хэрэглэгч нэмэхэд шаардлагатай бол)
+  const skWrap=document.getElementById('sk-wrap');
+  const skNote=document.getElementById('sk-validated-note');
+  if(skWrap)skWrap.style.display='block';
+  if(skNote)skNote.style.display='none';
+  const us=gU();
+  if(us&&us.length>0) scrShow('s-home');
+  else goHome();
 }
 
 function goPin(un){
@@ -7161,6 +7265,13 @@ function fillFromRecurring(ri){
 // REFRESH + CHANGELOG
 // ═══════════════════════════════════════════════════
 const CHANGELOG=[
+  {ver:'5.64',date:'2026-06-12',items:['🔐 Шинэ/Хуучин хэрэглэгч хатуу тусгаарлалт: Шинэ=заавал registration, Хуучин=PIN only']},
+  {ver:'5.63',date:'2026-06-12',items:['🎯 Нэвтрэх: Шинэ/Хуучин сонголт lic-screen дээр харагдана']},
+  {ver:'5.62',date:'2026-06-12',items:[
+    '👤 Нэвтрэх: 1 хэрэглэгч бол PIN рүү автомат, 2+ бол сонгох',
+    '👤 Шинэ хэрэглэгч нэмэх товч (s-home)',
+    '🔑 Setup: key аль хэдийн баталгаажсан бол pre-fill + нуух'
+  ]},
   {ver:'5.61',date:'2026-06-12',items:['🍎 iOS PWA 404 засагдлаа: manifest.json+sw.js жинхэнэ файлаас уншина']},
   {ver:'5.60',date:'2026-06-12',items:['🍎 iOS PWA: manifest start_url=/finance-tracker/ (404 засагдлаа)']},
   {ver:'5.59',date:'2026-06-12',items:['📦 manifest.json + sw.js inline — нэг файл (index.html) л upload хийхэд хангалттай']},
@@ -7792,7 +7903,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   // License event bind
   licBindEvents();
   // App version шалгаж кэш цэвэрлэх
-  const APP_VERSION='v5.61';
+  const APP_VERSION='v5.64';
   const savedVersion=localStorage.getItem('app_version');
   if(savedVersion&&savedVersion!==APP_VERSION){
     // Хуучин version — кэш цэвэрлэж шинэ файл татна
