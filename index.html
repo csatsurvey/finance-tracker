@@ -5665,6 +5665,9 @@ function easyAutoSplitLoan(){
   }
 }
 
+let pfNewPinBuf='';        // PIN шинэ оруулах buffer
+let pfResetUsername=null;  // PIN reset-н хэрэглэгч
+let pfResetCode='';        // PIN reset OTP код
 let _eSubmitting=false;
 function _setSubmitBtn(disabled){
   // Бүх submit товчийг идэвхгүй/идэвхтэй болгох
@@ -7448,6 +7451,7 @@ function fillFromRecurring(ri){
 // REFRESH + CHANGELOG
 // ═══════════════════════════════════════════════════
 const CHANGELOG=[
+  {ver:'5.69',date:'2026-06-13',items:['🐛 pfNewPinBuf, pfResetUsername, pfResetCode глобал зарлалт нэмэгдлээ']},
   {ver:'5.68',date:'2026-06-15',items:[
     '🔒 Зээл төлөлт: баталгаажуулах confirm dialog',
     '⛔ Үлдэгдэл шалгалт: 0 үлдэгдэлтэй бол хориглоно',
@@ -8099,7 +8103,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   // License event bind
   licBindEvents();
   // App version шалгаж кэш цэвэрлэх
-  const APP_VERSION='v5.68';
+  const APP_VERSION='v5.69';
   const savedVersion=localStorage.getItem('app_version');
   if(savedVersion&&savedVersion!==APP_VERSION){
     // Хуучин version — кэш цэвэрлэж шинэ файл татна
