@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Миний Санхүү — Суулгах</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1e3a5f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Миний Санхүү">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'Segoe UI',sans-serif;background:#0f172a;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:0 0 60px;color:#fff}
+
+/* Hero */
+.hero{width:100%;background:linear-gradient(160deg,#1e3a5f 0%,#1e40af 60%,#0d6e87 100%);padding:48px 24px 40px;text-align:center;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")}
+.app-icon{width:80px;height:80px;background:rgba(255,255,255,.15);border-radius:22px;display:flex;align-items:center;justify-content:center;font-size:44px;margin:0 auto 16px;backdrop-filter:blur(10px);border:1.5px solid rgba(255,255,255,.2)}
+.hero h1{font-size:28px;font-weight:800;letter-spacing:-.5px;margin-bottom:6px}
+.hero p{font-size:14px;opacity:.7}
+
+/* Content */
+.content{width:100%;max-width:440px;padding:0 16px;margin-top:-16px}
+
+/* Main install card */
+.install-card{background:#fff;border-radius:20px;padding:24px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.3)}
+.install-card .status{font-size:13px;color:#6b7280;margin-bottom:16px;min-height:20px}
+
+/* States */
+.state{display:none}
+.state.active{display:block}
+
+/* Android/Desktop install */
+#state-install .big-btn{width:100%;padding:18px;background:linear-gradient(135deg,#1e40af,#1e3a5f);color:#fff;border:none;border-radius:14px;font-size:18px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:-.3px;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 4px 16px rgba(30,64,175,.4)}
+#state-install .big-btn:active{transform:scale(.98)}
+#state-install .sub{font-size:12px;color:#9ca3af;margin-top:10px}
+
+/* Loading */
+#state-loading{padding:20px 0}
+.spinner{width:40px;height:40px;border:3px solid #e5e7eb;border-top-color:#1e40af;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+#state-loading p{font-size:14px;color:#6b7280}
+
+/* iOS */
+#state-ios .ios-steps{text-align:left;display:flex;flex-direction:column;gap:14px;margin-top:4px}
+#state-ios .ios-step{display:flex;align-items:center;gap:12px;background:#f8fafc;border-radius:12px;padding:12px 14px}
+#state-ios .ios-step .num{width:28px;height:28px;background:#007aff;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+#state-ios .ios-step .txt strong{font-size:14px;display:block;color:#111}
+#state-ios .ios-step .txt span{font-size:12px;color:#6b7280}
+#state-ios .ios-step .icon{font-size:24px;flex-shrink:0}
+.safari-badge{background:#fff3cd;border:1px solid #ffc107;border-radius:10px;padding:10px 12px;font-size:12px;color:#856404;margin-bottom:14px;display:flex;gap:8px;align-items:center;text-align:left}
+#state-ios h3{font-size:16px;font-weight:700;color:#111;margin-bottom:14px;text-align:left}
+
+/* Already installed */
+#state-done .done-icon{font-size:56px;margin-bottom:12px}
+#state-done h3{font-size:20px;font-weight:700;color:#111;margin-bottom:6px}
+#state-done p{font-size:14px;color:#6b7280;margin-bottom:16px}
+#state-done a{display:block;padding:14px;background:#16a34a;color:#fff;border-radius:12px;text-decoration:none;font-size:15px;font-weight:700}
+
+/* Desktop */
+#state-desktop .desk-steps{display:flex;flex-direction:column;gap:10px;text-align:left;margin-top:8px}
+#state-desktop .desk-step{display:flex;gap:10px;align-items:center;background:#f8fafc;border-radius:10px;padding:10px 12px}
+#state-desktop .desk-step .icon{font-size:22px;flex-shrink:0}
+#state-desktop .desk-step span{font-size:13px;color:#374151}
+#state-desktop h3{font-size:15px;font-weight:700;color:#111;margin-bottom:10px;text-align:left}
+#state-desktop .big-btn{width:100%;padding:14px;background:linear-gradient(135deg,#1e40af,#1e3a5f);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px}
+
+/* Open button */
+.open-link{display:block;width:100%;padding:13px;background:#f3f4f6;color:#374151;border-radius:12px;text-decoration:none;font-size:14px;font-weight:600;margin-top:10px;text-align:center}
+
+/* Info row */
+.info-row{display:flex;gap:8px;margin-top:14px}
+.info-chip{flex:1;background:#f0f4f8;border-radius:10px;padding:10px;text-align:center;font-size:11px;color:#6b7280}
+.info-chip strong{font-size:18px;display:block;margin-bottom:2px}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="app-icon">💰</div>
+  <h1>Миний Санхүү</h1>
+  <p>Хувийн санхүүгийн бүртгэл</p>
+</div>
+
+<div class="content">
+  <div class="install-card">
+    <div class="status" id="status-text">Шалгаж байна...</div>
+
+    <!-- Loading -->
+    <div class="state active" id="state-loading">
+      <div class="spinner"></div>
+      <p>Таны төхөөрөмжийг тодорхойлж байна...</p>
+    </div>
+
+    <!-- Android / Desktop: native install button -->
+    <div class="state" id="state-install">
+      <div style="font-size:56px;margin-bottom:12px">📲</div>
+      <div style="font-size:20px;font-weight:800;color:#111;margin-bottom:6px">Апп суулгах бэлэн!</div>
+      <div style="font-size:13px;color:#6b7280;margin-bottom:20px">Нэг товч дарахад л нүүр дэлгэцэнд суулгагдана</div>
+      <button class="big-btn" onclick="doInstall()" id="install-btn">
+        <span>⬇️</span> Суулгах
+      </button>
+      <div class="sub">Апп Store шаардахгүй · Үнэгүй</div>
+    </div>
+
+    <!-- iOS Safari: step-by-step -->
+    <div class="state" id="state-ios">
+      <div class="safari-badge">
+        <span style="font-size:18px;flex-shrink:0">⚠️</span>
+        <span><strong>Safari хөтч ашиглаж байна уу?</strong><br>Chrome биш — Safari-д нэвтрэх шаардлагатай</span>
+      </div>
+      <h3>📱 iPhone / iPad суулгах заавар:</h3>
+      <div class="ios-steps">
+        <div class="ios-step">
+          <div class="num">1</div>
+          <div class="icon">⬆️</div>
+          <div class="txt"><strong>Share товч дарна</strong><span>Дэлгэцийн доод хэсэгт 📤 дүрс</span></div>
+        </div>
+        <div class="ios-step">
+          <div class="num">2</div>
+          <div class="icon">➕</div>
+          <div class="txt"><strong>Add to Home Screen</strong><span>Жагсаалтаас хайж олно</span></div>
+        </div>
+        <div class="ios-step">
+          <div class="num">3</div>
+          <div class="icon">✅</div>
+          <div class="txt"><strong>Add дарна</strong><span>Баруун дээд буланд</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Already installed -->
+    <div class="state" id="state-done">
+      <div class="done-icon">✅</div>
+      <h3>Апп суулгасан байна!</h3>
+      <p>Нүүр дэлгэцнээс 💰 Миний Санхүү аппыг нээнэ үү</p>
+      <a href="https://csatsurvey.github.io/finance-tracker/">Аппыг нээх →</a>
+    </div>
+
+    <!-- Desktop Chrome/Edge -->
+    <div class="state" id="state-desktop">
+      <div style="font-size:48px;margin-bottom:12px">🖥️</div>
+      <div style="font-size:18px;font-weight:800;color:#111;margin-bottom:6px">Компьютерт суулгах</div>
+      <button class="big-btn" onclick="doInstall()" id="install-btn-desk">
+        <span>⬇️</span> Компьютерт суулгах
+      </button>
+      <h3 style="margin-top:14px">Гараар суулгах:</h3>
+      <div class="desk-steps">
+        <div class="desk-step">
+          <div class="icon">🌐</div>
+          <span>Chrome/Edge хөтчийн хаягийн мөрний баруун талд <strong>⊕</strong> дүрс харагдана</span>
+        </div>
+        <div class="desk-step">
+          <div class="icon">🖱️</div>
+          <span>Тэр дүрс дарахад "Install Миний Санхүү" гэсэн popup гарна</span>
+        </div>
+        <div class="desk-step">
+          <div class="icon">✅</div>
+          <span><strong>Install</strong> дарахад desktop апп шиг суулгагдана</span>
+        </div>
+      </div>
+    </div>
+
+    <a class="open-link" href="https://csatsurvey.github.io/finance-tracker/" id="open-link" style="display:none">
+      🌐 Хөтчөөр нэвтрэх
+    </a>
+  </div>
+
+  <div class="info-row">
+    <div class="info-chip"><strong>🔒</strong>Аюулгүй</div>
+    <div class="info-chip"><strong>💾</strong>5MB</div>
+    <div class="info-chip"><strong>🆓</strong>Үнэгүй</div>
+    <div class="info-chip"><strong>☁️</strong>Синк</div>
+  </div>
+</div>
+
+<script>
+const APP_URL='https://csatsurvey.github.io/finance-tracker/';
+let deferredPrompt=null;
+
+// Service Worker бүртгэх (install criteria-г хангана)
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(()=>{});
+}
+
+// Device тодорхойлох
+const ua=navigator.userAgent;
+const isIOS=/iphone|ipad|ipod/i.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const isAndroid=/android/i.test(ua);
+const isMobile=isIOS||isAndroid;
+const isStandalone=window.navigator.standalone===true||window.matchMedia('(display-mode:standalone)').matches;
+const isSafari=/safari/i.test(ua)&&!/chrome|crios|fxios|edg/i.test(ua);
+const isChrome=/chrome|chromium/i.test(ua)&&!/edg/i.test(ua);
+const isEdge=/edg/i.test(ua);
+
+// beforeinstallprompt — Android + Desktop Chrome/Edge
+window.addEventListener('beforeinstallprompt',(e)=>{
+  e.preventDefault();
+  deferredPrompt=e;
+  showState(isMobile?'install':'desktop');
+  document.getElementById('status-text').textContent='';
+});
+
+// Суулгасан бол
+window.addEventListener('appinstalled',()=>{
+  showState('done');
+  deferredPrompt=null;
+});
+
+function showState(s){
+  document.querySelectorAll('.state').forEach(el=>el.classList.remove('active'));
+  const el=document.getElementById('state-'+s);
+  if(el)el.classList.add('active');
+  document.getElementById('open-link').style.display=(s==='ios'||s==='desktop')?'block':'none';
+}
+
+function doInstall(){
+  if(!deferredPrompt)return;
+  const btn=document.getElementById('install-btn')||document.getElementById('install-btn-desk');
+  if(btn){btn.disabled=true;btn.style.opacity='0.7';btn.innerHTML='<span>⏳</span> Суулгаж байна...';}
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(r=>{
+    if(r.outcome==='accepted'){showState('done');}
+    else{
+      if(btn){btn.disabled=false;btn.style.opacity='1';btn.innerHTML='<span>⬇️</span> Суулгах';}
+    }
+    deferredPrompt=null;
+  });
+}
+
+// Эхлүүлэх логик
+setTimeout(()=>{
+  if(isStandalone){showState('done');return;}
+  if(deferredPrompt){return;} // beforeinstallprompt аль хэдийн ирсэн
+  if(isIOS){
+    showState('ios');
+    document.getElementById('status-text').textContent=isSafari?'':'⚠️ Safari хөтчөөр нэвтрэнэ үү';
+    return;
+  }
+  if(isAndroid){
+    // Chrome гэхдээ prompt ирээгүй — мөн browser дотор эсвэл шаардлага хангагдаагүй
+    showState('install');
+    document.getElementById('status-text').textContent='';
+    document.getElementById('install-btn').onclick=()=>{
+      if(deferredPrompt){doInstall();}
+      else{window.location.href=APP_URL;}
+    };
+    document.getElementById('install-btn').innerHTML='<span>🌐</span> Аппыг нээх';
+    return;
+  }
+  // Desktop
+  showState('desktop');
+  document.getElementById('status-text').textContent='';
+},1200);
+</script>
+</body>
+</html>
