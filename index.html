@@ -7283,9 +7283,9 @@ function openEditAcc(type,id){
         '<input class="f-in" id="ea-name" value="'+sv.name.replace(/"/g,'&quot;')+'"></div>'+
       '<div class="f-row g2">'+
         '<div class="f-grp"><div class="f-lbl">Одоогийн үлдэгдэл</div>'+
-          '<input class="f-in" id="ea-sav-bal" type="text" inputmode="numeric" oninput="fmtI(this)" value="'+sb.toLocaleString()+'"></div>'+
+          '<input class="f-in" id="ea-sav-bal" type="text" inputmode="numeric" oninput="fmtI(this)" value="'+sb+'"   /* raw */></div>'+
         '<div class="f-grp"><div class="f-lbl">Зорилтот дүн</div>'+
-          '<input class="f-in" id="ea-goal" type="text" inputmode="numeric" oninput="fmtI(this)" value="'+(sv.goal?(sv.goal).toLocaleString():'')+'">'+          '</div>'+
+          '<input class="f-in" id="ea-goal" type="text" inputmode="numeric" oninput="fmtI(this)" value="'+(sv.goal||'')+'">'+          '</div>'+
       '</div>'+
       '<div class="f-row g2">'+
         '<div class="f-grp"><div class="f-lbl">Сарын хүү %</div>'+
@@ -7323,10 +7323,10 @@ function openEditAcc(type,id){
         '<input class="f-in" id="ea-name" value="'+l.name.replace(/"/g,'&quot;')+'"></div>'+
       // Зээлийн үлдэгдэл шинэчлэх
       '<div class="f-grp"><div class="f-lbl" style="color:var(--am)">Зээлийн үлдэгдэл шинэчлэх</div>'+
-        '<input class="f-in" id="ea-balance" type="text" inputmode="numeric" oninput="fmtI(this)" value="'+lb.toLocaleString()+'">'+
+        '<input class="f-in" id="ea-balance" type="text" inputmode="numeric" oninput="fmtI(this)" value="'+lb+'"   /* raw — locale-аас хамааралгүй */>'+
         '<div style="font-size:10px;color:var(--tx3);margin-top:2px">Тооцоолсон үлдэгдэл: <strong>'+fmt(lb)+'</strong></div></div>'+
       '<div class="f-grp"><div class="f-lbl" style="color:var(--am)">Нийт зээлсэн дүн</div>'+
-        '<input class="f-in" id="ea-principal" type="text" inputmode="numeric" oninput="fmtI(this)" value="'+l.principal.toLocaleString()+'">'+
+        '<input class="f-in" id="ea-principal" type="text" inputmode="numeric" oninput="fmtI(this)" value="'+l.principal+'"   /* raw */>'+
         '</div>'+
       '<div class="f-row g2">'+
         '<div class="f-grp"><div class="f-lbl">Сарын хүү %</div>'+
@@ -7356,16 +7356,17 @@ function openEditAcc(type,id){
 function saveEditSav(id){
   const sv=ACCS.savings.find(s=>s.id===id);if(!sv)return;
   // 1. ЭХЛЭЭД бүгдийг DOM-оос уших
+  const safeAmt=(v)=>parseInt(String(v||'').replace(/\D/g,''))||0;
   const _n   =(document.getElementById('ea-name')?.value||'').trim();
   const _rate =parseFloat(document.getElementById('ea-rate')?.value)||0;
   const _months=parseInt(document.getElementById('ea-months')?.value)||0;
-  const _goal =pAmt(document.getElementById('ea-goal')?.value||'0');
+  const _goal =safeAmt(document.getElementById('ea-goal')?.value);
   const _bank =(document.getElementById('ea-bank')?.value||'').trim();
   const _accno=(document.getElementById('ea-accno')?.value||'').trim();
   const _date =document.getElementById('ea-date')?.value||'';
   const _edate=document.getElementById('ea-enddate')?.value||'';
   const _sbVal=(document.getElementById('ea-sav-bal')?.value||'').trim();
-  const _newSb=pAmt(_sbVal);
+  const _newSb=safeAmt(_sbVal);
   // 2. ACCS шинэчлэх
   if(_n)sv.name=_n;
   sv.rate=_rate; sv.months=_months; sv.goal=_goal;
@@ -7402,6 +7403,8 @@ function eaPayFreqChange(){
 function saveEditLoan(id){
   const l=ACCS.loans.find(x=>x.id===id);if(!l)return;
   // 1. ЭХЛЭЭД бүгдийг DOM-оос уших (sT/sA дуудахаас өмнө!)
+  // safeAmt: toLocaleString locale-г үл харгалзан зөв уншина
+  const safeAmt=(v)=>parseInt(String(v||'').replace(/\D/g,''))||0;
   const _n =(document.getElementById('ea-name')?.value||'').trim();
   const _rate =parseFloat(document.getElementById('ea-rate')?.value)||0;
   const _months=parseInt(document.getElementById('ea-months')?.value)||0;
@@ -7409,8 +7412,8 @@ function saveEditLoan(id){
   const _accno=(document.getElementById('ea-accno')?.value||'').trim();
   const _sd  =document.getElementById('ea-startdate')?.value||'';
   const _ed  =document.getElementById('ea-enddate')?.value||'';
-  const _newBal=pAmt(document.getElementById('ea-balance')?.value||'0');
-  const _newPr =pAmt(document.getElementById('ea-principal')?.value||'0');
+  const _newBal=safeAmt(document.getElementById('ea-balance')?.value);
+  const _newPr =safeAmt(document.getElementById('ea-principal')?.value);
   // 2. ACCS объект шинэчлэх
   if(_n)l.name=_n;
   l.rate=_rate; l.months=_months; l.fixedPay=0;
@@ -7670,6 +7673,10 @@ function fillFromRecurring(ri){
 // REFRESH + CHANGELOG
 // ═══════════════════════════════════════════════════
 const CHANGELOG=[
+  {ver:'5.101',date:'2026-06-14',items:[
+    '🐛 Locale format bug: toLocaleString цэгтэй дүнг pAmt буруу уншдаг байсан',
+    '✅ safeAmt() функц нэмэгдлээ — бүх locale-д зөв ажиллана'
+  ]},
   {ver:'6.00',date:'2026-06-14',items:[
     '🐛 Зээлийн үлдэгдэл буурах залруулгад харилцах өөрчлөгдөхгүй',
     '🐛 Хадгаламж залруулгад харилцах өөрчлөгдөхгүй',
