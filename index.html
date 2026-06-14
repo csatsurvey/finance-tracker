@@ -1569,12 +1569,18 @@ const sU=async v=>{
 const gT=u=>JSON.parse(localStorage.getItem(TK(u))||'[]');
 const sT=(u,v)=>{
   localStorage.setItem(TK(u),JSON.stringify(v));
-  if(initFB())fbDb.ref(VER+'/'+u+'/txn').set(v);
+  if(initFB()){
+    window._justSavedTxn=Date.now(); // Listener дарахгүй байхын тулд
+    fbDb.ref(VER+'/'+u+'/txn').set(v);
+  }
 };
 const gA=u=>JSON.parse(localStorage.getItem(AK(u))||'null');
 const sA=(u,v)=>{
   localStorage.setItem(AK(u),JSON.stringify(v));
-  if(initFB())fbDb.ref(VER+'/'+u+'/accs').set(v);
+  if(initFB()){
+    window._justSavedAccs=Date.now(); // Listener дарахгүй байхын тулд
+    fbDb.ref(VER+'/'+u+'/accs').set(v);
+  }
 };
 const gC=u=>{
   const d=JSON.parse(localStorage.getItem(CK(u))||'null');
@@ -1657,6 +1663,8 @@ function fbStartSync(u){
   // TXN sync
   if(!_syncListener){
     _syncListener=fbDb.ref(VER+'/'+u+'/txn').on('value',snap=>{
+      // Бид сая хадгалсан бол 2 секундын хугацаанд listener-г дарна
+      if(window._justSavedTxn&&Date.now()-window._justSavedTxn<2000)return;
       const fbTxn=snap.val();
       if(!fbTxn)return;
       const localTxn=gT(u);
@@ -1671,6 +1679,8 @@ function fbStartSync(u){
   // ACCS sync
   if(!_syncAccsListener){
     _syncAccsListener=fbDb.ref(VER+'/'+u+'/accs').on('value',snap=>{
+      // Бид сая хадгалсан бол 2 секундын хугацаанд listener-г дарна
+      if(window._justSavedAccs&&Date.now()-window._justSavedAccs<2000)return;
       const fbAccs=snap.val();
       if(!fbAccs)return;
       const da=defaultAccounts();
@@ -7545,12 +7555,10 @@ function saveEditLoan(id){
     sT(CU.username,TXN); // Үргэлж хадгалах (устгасан ч, нэмсэн ч)
   }
   // 4. Хадгалж хаах
-  sA(CU.username,ACCS);
-  // Нэр болон бусад талбар Firebase-д шууд хадгалах (listener race-аас сэргийлэх)
-  if(initFB())fbDb.ref(VER+'/'+CU.username+'/accs').set(ACCS);
+  sA(CU.username,ACCS); // localStorage + Firebase (2сек listener blocked)
   renderAll();
   closeMgr();
-  toast('✅ '+l.name+' шинэчлэгдлээ. Нийт зээлсэн: '+fmt(_newPr>0?_newPr:l.principal));
+  toast('✅ '+l.name+' шинэчлэгдлээ. Үлдэгдэл: '+fmt(calcBal().loans[id]||0)+' Нийт: '+fmt(l.principal));
 }
 
 function editLoanName(id){
@@ -7780,6 +7788,10 @@ function fillFromRecurring(ri){
 // REFRESH + CHANGELOG
 // ═══════════════════════════════════════════════════
 const CHANGELOG=[
+  {ver:'5.108',date:'2026-06-14',items:[
+    '🔧 Firebase listener race condition засагдлаа',
+    '✅ Зээл болон хадгаламжийн засвар найдвартай хадгалагдана'
+  ]},
   {ver:'5.107',date:'2026-06-14',items:['🏠 Нүүрт харилцах алдаа байвал мэдэгдэл+засах товч']},
   {ver:'5.105',date:'2026-06-14',items:[
     '✅ Залруулга бичилт: app нээхэд автоматаар _balAdj=true тохируулна'
