@@ -7527,28 +7527,46 @@ function diagHar(){
 }
 
 function reloadFromFirebase(){
-  if(!initFB()||!CU){toast('Firebase холбоогүй');return;}
+  if(!CU){toast('Нэвтрээгүй байна');return;}
+  // localStorage шалгах
+  const localRaw=localStorage.getItem(TK(CU.username));
+  const localCount=localRaw?JSON.parse(localRaw).length:0;
+  if(!initFB()){
+    toast('Firebase холбоогүй. localStorage: '+localCount+' бичилт');
+    if(localCount>0){
+      TXN=JSON.parse(localRaw);
+      window._balAdjFixed=false;
+      renderAll();
+    }
+    return;
+  }
+  // Firebase-с шууд татах
+  toast('Firebase-с татаж байна...');
   fbDb.ref(VER+'/'+CU.username+'/txn').once('value',snap=>{
     const fbTxn=snap.val();
-    if(fbTxn&&fbTxn.length>0){
+    const fbCount=fbTxn?fbTxn.length:0;
+    if(fbCount>0){
       localStorage.setItem(TK(CU.username),JSON.stringify(fbTxn));
       TXN=fbTxn;
       window._balAdjFixed=false;
       window._justSavedTxn=0;
       renderAll();
-      toast('✅ Firebase-с '+fbTxn.length+' бичилт ачааллав');
+      toast('✅ Firebase: '+fbCount+' бичилт ачааллав');
     } else {
-      toast('⚠️ Firebase дахь бичилт хоосон байна');
-    }
-  });
-  fbDb.ref(VER+'/'+CU.username+'/accs').once('value',snap=>{
-    const fbAccs=snap.val();
-    if(fbAccs){
-      localStorage.setItem(AK(CU.username),JSON.stringify(fbAccs));
-      ACCS=fbAccs;
+      // Firebase хоосон — localStorage-с оролдох
+      if(localCount>0){
+        TXN=JSON.parse(localRaw);
+        window._balAdjFixed=false;
+        renderAll();
+        toast('⚠️ Firebase хоосон. localStorage: '+localCount+' бичилт харуулав');
+      } else {
+        toast('❌ Firebase болон localStorage хоёулаа хоосон байна!');
+        alert('Бичилтүүд олдсонгүй!\nFirebase path: '+VER+'/'+CU.username+'/txn\nLocal key: txn_'+CU.username+'\n\nТехникийн дэмжлэг авна уу.');
+      }
     }
   });
 }
+
 function clearLoanBalAdj(id){
   const l=ACCS.loans.find(x=>x.id===id);
   const name=l?l.name:'Зээл';
@@ -8717,7 +8735,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   // License event bind
   licBindEvents();
   // App version шалгаж кэш цэвэрлэх
-  const APP_VERSION='v5.113';
+  const APP_VERSION='v5.114';
 console.log('%c Миний Санхүү '+APP_VERSION,'background:#3b82f6;color:#fff;padding:2px 6px;border-radius:4px');
   const savedVersion=localStorage.getItem('app_version');
   if(savedVersion&&savedVersion!==APP_VERSION){
