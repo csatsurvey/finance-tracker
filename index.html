@@ -7432,32 +7432,41 @@ function openEditAcc(type,id){
 function diagHar(){
   const bal=calcBal();
   const har=bal.har;
-  const badTxns=TXN.filter(t=>{
-    const d=t.desc||'';
-    const isAdj=d.indexOf('тохируулга')>=0||d.indexOf('залруулга')>=0;
-    if(!isAdj)return false;
-    if(t.type==='loan_pay'&&!t._balAdj)return true;
-    if(t.type==='saving_in'&&!t.isExisting)return true;
-    return false;
+
+  // Бүх залруулга бичилтийг тоолох
+  const adjTxns=TXN.filter(t=>
+    t._balAdj||t._harAdj||t._auto||
+    (t.type==='loan_interest')||
+    ((t.desc||'').indexOf('тохируулга')>=0)||
+    ((t.desc||'').indexOf('залруулга')>=0&&(t.type==='expense'||t.type==='opening_balance'||t.type==='loan_pay'||t.type==='saving_out'))
+  );
+
+  let msg='Харилцах: '+fmt(har)+'\n';
+  msg+='(Зөв дүн: ₮47,241 гэж хэлсэн)\n\n';
+  msg+='Устгах залруулга бичилтүүд ('+adjTxns.length+' ш):\n';
+  adjTxns.slice(0,8).forEach(t=>{
+    msg+='  ['+t.type+']: '+fmt(t.amt)+'  '+( t.desc||'').substring(0,20)+'\n';
   });
-  if(badTxns.length>0&&confirm('Харилцах: '+fmt(har)+'\nБуруу бичилт: '+badTxns.length+' ш\nЗасах уу?')){
-    badTxns.forEach(t=>{if(t.type==='loan_pay')t._balAdj=true;else t.isExisting=true;});
-    sT(CU.username,TXN);if(initFB())fbDb.ref(VER+'/'+CU.username+'/txn').set(TXN);
-    setTimeout(()=>{renderAll();toast('Засагдлаа! Харилцах: '+fmt(calcBal().har));},300);
-    return;
-  }
-  const raw=prompt('Харилцах одоо: '+fmt(har)+'\nЗөв дүн оруулна уу:','');
-  if(!raw||!raw.trim())return;
-  const t2=parseInt(raw.replace(/\D/g,''))||0;
-  if(!t2||t2===har)return;
-  const d=t2-har;
-  TXN.unshift(d>0
-    ?{id:uid(),type:'opening_balance',amt:d,subType:'card',date:nowDate(),datetime:nowDateTime(),desc:'Харилцах залруулга',_harAdj:true}
-    :{id:uid(),type:'expense',amt:-d,account:'card',cat:'Залруулга',date:nowDate(),datetime:nowDateTime(),desc:'Харилцах залруулга',_harAdj:true});
-  sT(CU.username,TXN);if(initFB())fbDb.ref(VER+'/'+CU.username+'/txn').set(TXN);
-  const wb=document.getElementById('har-warn');if(wb)wb.style.display='none';
+  if(adjTxns.length>8)msg+='  ...бас '+(adjTxns.length-8)+' бичилт\n';
+  msg+='\nЭдгээрийг устгаад зөв үлдэгдэл тооцоолох уу?';
+
+  if(!confirm(msg))return;
+
+  // Устгах
+  const adjIds=new Set(adjTxns.map(t=>t.id));
+  TXN=TXN.filter(t=>!adjIds.has(t.id));
+
+  // Хадгалах
+  sT(CU.username,TXN);
+  if(initFB())fbDb.ref(VER+'/'+CU.username+'/txn').set(TXN);
+  window._balAdjFixed=false;
   window._harChecked=false;
-  setTimeout(()=>{renderAll();toast('Харилцах '+fmt(har)+' \u2192 '+fmt(t2));},300);
+
+  setTimeout(()=>{
+    renderAll();
+    const newHar=calcBal().har;
+    toast('✅ '+adjTxns.length+' бичилт устгагдлаа. Харилцах: '+fmt(newHar));
+  },500);
 }
 
 function clearLoanBalAdj(id){
