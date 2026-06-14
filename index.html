@@ -2819,21 +2819,32 @@ function renderHeroDetails(bal){
 }
 
 function autoFixBalAdj(){
-  // Залруулга бичилт байвал _balAdj:true автоматаар тохируулах (нэг удаа л)
   if(window._balAdjFixed)return;
   window._balAdjFixed=true;
+  let changed=false;
+  // 1. Автоматаар үүссэн loan_interest TXN устгах
+  const loanIntAuto=TXN.filter(t=>t.type==='loan_interest'&&
+    (t._auto||(t.desc||'').indexOf('сарын хүү')>=0));
+  if(loanIntAuto.length>0){
+    TXN=TXN.filter(t=>!(t.type==='loan_interest'&&
+      (t._auto||(t.desc||'').indexOf('сарын хүү')>=0)));
+    changed=true;
+    toast('🔄 '+loanIntAuto.length+' авто хүүгийн бичилт устгагдлаа. Зээлийн баланс зөв болов.');
+  }
+  // 2. Буруу залруулга засах
   const bad=TXN.filter(t=>!t._balAdj&&
-    ((t.desc||'').includes('тохируулга')||(t.desc||'').includes('залруулга'))&&
+    ((t.desc||'').indexOf('тохируулга')>=0||(t.desc||'').indexOf('залруулга')>=0)&&
     (t.type==='loan_pay'||t.type==='saving_out'));
-  if(bad.length>0){
-    bad.forEach(t=>{t._balAdj=true;});
+  if(bad.length>0){bad.forEach(t=>{t._balAdj=true;});changed=true;}
+  if(changed){
     sT(CU.username,TXN);
     if(initFB())fbDb.ref(VER+'/'+CU.username+'/txn').set(TXN);
-    // Flag reset after save so next renderAll re-checks
-    setTimeout(()=>{window._balAdjFixed=false;},2000);
-    toast('✅ '+bad.length+' залруулга бичилт автоматаар засагдлаа. Харилцах: '+fmt(calcBal().har));
+    setTimeout(()=>{window._balAdjFixed=false;renderAll();},1500);
+  } else {
+    setTimeout(()=>{window._balAdjFixed=false;},500);
   }
 }
+
 function renderAll(){
   if(CU)autoFixBalAdj(); // Автомат засвар
   invalidateFilterCache();
@@ -3441,7 +3452,7 @@ function renderLoanCards(bal){
           '</div>'+
         '</div>'+
         
-        (intPaid>0?'<div style="font-size:12px;color:var(--tx3);margin-bottom:8px">\u041D\u0438\u0439\u0442 \u0445\u04AF\u04AF \u0442\u04E9\u043B\u0441\u04E9\u043D: <span style="color:var(--rd);font-weight:600">\u2212'+fmt(intPaid)+'\u20AE</span></div>':'')+
+        
         '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
           (!isClosed?'<button onclick="openEasyLoanPay(\''+l.id+'\')"'+
             ' style="flex:1;padding:9px;background:linear-gradient(135deg,#c97a72,#ed9a91);color:#fff;border:none;border-radius:9px;font-family:Sora,sans-serif;font-size:12px;font-weight:600;cursor:pointer">'+
@@ -3475,6 +3486,9 @@ function calcSavingInterest(svId){
 }
 
 function calcLoanInterest(loanId){
+  // Автомат хүүгийн тооцоолол унтраасан — гараар loan_pay дотор хүү оруулна
+  toast('ℹ️ Хүүгийн тооцоолол унтраасан. Зээл төлөхдөө Хүү талбарт гараас оруулна уу.');
+  return;
   const l=ACCS.loans.find(x=>x.id===loanId);
   if(!l||!l.rate){toast('Хүү тохируулагдаагүй байна');return;}
   const bal=calcBal();
@@ -7788,6 +7802,11 @@ function fillFromRecurring(ri){
 // REFRESH + CHANGELOG
 // ═══════════════════════════════════════════════════
 const CHANGELOG=[
+  {ver:'5.109',date:'2026-06-14',items:[
+    '🔄 Авто loan_interest TXN устгагдана (зээлийн баланс зөв болно)',
+    '🚫 Автомат хүүгийн тооцоолол унтраасан',
+    '👁️ Нийт хүү мэдээлэл хасагдлаа'
+  ]},
   {ver:'5.108',date:'2026-06-14',items:[
     '🔧 Firebase listener race condition засагдлаа',
     '✅ Зээл болон хадгаламжийн засвар найдвартай хадгалагдана'
