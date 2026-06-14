@@ -7385,157 +7385,36 @@ function openEditAcc(type,id){
 
 // ══ ХАРИЛЦАХ DIAGNOSTIC ══
 function diagHar(){
-  // ── Бүх TXN-г задлан har-д нөлөөлж буй зүйлийг шалгах ──
-  let card=0,cash=0;
-  const loans={},savings={};
-  if(!ACCS){toast('ACCS байхгүй');return;}
-  (ACCS.loans||[]).forEach(l=>{loans[l.id]=0;});
-  (ACCS.savings||[]).forEach(s=>{savings[s.id]=0;});
-
-  const effects=[];
-  TXN.slice().reverse().forEach(t=>{
-    const a=t.amt||0;
-    const isCard=(t.account||'card')==='card';
-    let effect=0;
-    const addHar=(v)=>{
-      if(isCard){card+=v;effect=v;}
-      else{cash+=v;effect=v;}
-    };
-    switch(t.type){
-      case 'income':    addHar(a);   break;
-      case 'expense':   addHar(-a);  break;
-      case 'opening_balance':
-        if(t.subType==='cash')cash+=a;
-        else{card+=a;effect=a;}
-        break;
-      case 'saving_in':
-        if(!t.isExisting){addHar(-a);}
-        if(t.savingId)savings[t.savingId]=(savings[t.savingId]||0)+a;
-        break;
-      case 'saving_out':
-        if(!t._balAdj){addHar(a);}
-        if(t.savingId)savings[t.savingId]=(savings[t.savingId]||0)-a;
-        break;
-      case 'loan_take':
-        if(!t.isExisting){addHar(a);}
-        if(t.loanId&&loans[t.loanId]!==undefined)loans[t.loanId]+=a;
-        break;
-      case 'loan_pay':
-        if(!t._balAdj){addHar(-a);}
-        {const pr=t.fromPrincipal||0;if(t.loanId&&loans[t.loanId]!==undefined)loans[t.loanId]-=pr;}
-        break;
-      case 'loan_interest':
-        if(t.loanId&&loans[t.loanId]!==undefined)loans[t.loanId]+=a;
-        break;
-      case 'transfer':
-        if(t.fromAccount==='card'){card-=a;cash+=a;effect=-a;}
-        else{cash-=a;card+=a;effect=a;}
-        break;
-    }
-    if(effect!==0){
-      effects.push({
-        date:t.date,type:t.type,desc:t.desc||'-',amt:a,
-        effect,runCard:card,runHar:card+cash,
-        _balAdj:!!t._balAdj,isExisting:!!t.isExisting,id:t.id
-      });
-    }
+  const bal=calcBal();
+  const har=bal.har;
+  const badTxns=TXN.filter(t=>{
+    const d=t.desc||'';
+    const isAdj=d.indexOf('тохируулга')>=0||d.indexOf('залруулга')>=0;
+    if(!isAdj)return false;
+    if(t.type==='loan_pay'&&!t._balAdj)return true;
+    if(t.type==='saving_in'&&!t.isExisting)return true;
+    return false;
   });
-
-  const har=card+cash;
-
-  // Сэжигтэй TXN: 37382 орчим харилцахаас хасагдсан
-  const suspect=effects.filter(e=>e.effect<-5000&&
-    (e.type==='loan_pay'||e.type==='saving_in'||e.type==='expense'));
-
-  let report='📊 ХАРИЛЦАХ ТАЙЛАН\n';
-  report+='══════════════════════════\n';
-  report+='Одоогийн: '+fmt(har)+'  (Карт:'+fmt(card)+' Бэлэн:'+fmt(cash)+')\n\n';
-
-  if(suspect.length>0){
-    report+='⚠️ СЭЖИГТЭЙ БИЧИЛТҮҮД:\n';
-    suspect.forEach(e=>{
-      report+='  ['+e.date+'] '+e.type+': '+fmt(e.amt)+' ('+e.desc+')';
-      if(e._balAdj)report+=' [_balAdj✓]';
-      if(e.isExisting)report+=' [isExisting✓]';
-      report+='\n';
-    });
-    report+='\n';
+  const info='Харилцах: '+fmt(har)+' | Карт:'+fmt(bal.card)+' Бэлэн:'+fmt(bal.cash)+
+    (badTxns.length>0?'\n\nБуруу залруулга: '+badTxns.length+' ш олдлоо':'');
+  if(badTxns.length>0&&confirm(info+'\n\nЗасах уу?')){
+    badTxns.forEach(t=>{if(t.type==='loan_pay')t._balAdj=true;else t.isExisting=true;});
+    sT(CU.username,TXN);
+    if(initFB())fbDb.ref(VER+'/'+CU.username+'/txn').set(TXN);
+    setTimeout(()=>{renderAll();toast('Засагдлаа! Харилцах: '+fmt(calcBal().har));},300);
+    return;
   }
-
-  // Сүүлийн 10 нөлөөтэй бичилт
-  report+='Сүүлийн нөлөөтэй бичилтүүд:\n';
-  effects.slice(-10).reverse().forEach(e=>{
-    const sign=e.effect>0?'+':'-';
-    report+='  '+e.date+' ['+e.type+']: '+sign+fmt(Math.abs(e.effect))+
-      ' → har='+fmt(e.runHar);
-    if(e._balAdj)report+=' ⚠️_balAdj';
-    report+=' ('+e.desc.substring(0,20)+')\n';
-  });
-
-  // Засах боломж
-  if(suspect.length>0){
-    const canFix=suspect.filter(e=>e._balAdj===false&&
-      ((e.desc||'').includes('тохируулга')||(e.desc||'').includes('залруулга')));
-    if(canFix.length>0){
-      report+='\n✅ '+canFix.length+' бичилтийг _balAdj=true болгон засаж болно. Засах уу?';
-      if(confirm(report)){
-        canFix.forEach(e=>{
-          const txn=TXN.find(t=>t.id===e.id);
-          if(txn)txn._balAdj=true;
-        });
-        sT(CU.username,TXN);
-        if(initFB())fbDb.ref(VER+'/'+CU.username+'/txn').set(TXN);
-        renderAll();
-        toast('✅ Засагдлаа! Харилцах: '+fmt(calcBal().har));
-        return;
-      }
-    } else {
-      // Гараас дүн оруулж засах
-      const target=prompt(report+'\n\nЗасах дүн оруулна уу (жишээ: 47241):','');
-      if(target!==null&&target.trim()!==''){
-        const t2=parseInt(String(target).replace(/\D/g,''))||0;
-        if(t2>0){
-          const d=t2-har;
-          if(d>0){
-            TXN.unshift({id:uid(),type:'opening_balance',amt:d,subType:'card',
-              date:nowDate(),datetime:nowDateTime(),desc:'Харилцах үлдэгдэл залруулга'});
-          } else if(d<0){
-            TXN.unshift({id:uid(),type:'expense',amt:Math.abs(d),account:'card',
-              cat:'Залруулга',date:nowDate(),datetime:nowDateTime(),
-              desc:'Харилцах үлдэгдэл залруулга'});
-          }
-          if(Math.abs(d)>0){
-            sT(CU.username,TXN);
-            if(initFB())fbDb.ref(VER+'/'+CU.username+'/txn').set(TXN);
-            renderAll();
-            toast('✅ Харилцах '+fmt(har)+' → '+fmt(t2));
-          }
-        }
-      }
-    }
-  } else {
-    const target=prompt(report+'\n\nЗасах дүн оруулна уу (жишээ: 47241, хоосон=зөвхөн харах):','');
-    if(target!==null&&target.trim()!==''){
-      const t2=parseInt(String(target).replace(/\D/g,''))||0;
-      if(t2>0){
-        const d=t2-har;
-        if(Math.abs(d)>0){
-          if(d>0){
-            TXN.unshift({id:uid(),type:'opening_balance',amt:d,subType:'card',
-              date:nowDate(),datetime:nowDateTime(),desc:'Харилцах үлдэгдэл залруулга'});
-          } else {
-            TXN.unshift({id:uid(),type:'expense',amt:Math.abs(d),account:'card',
-              cat:'Залруулга',date:nowDate(),datetime:nowDateTime(),
-              desc:'Харилцах үлдэгдэл залруулга'});
-          }
-          sT(CU.username,TXN);
-          if(initFB())fbDb.ref(VER+'/'+CU.username+'/txn').set(TXN);
-          renderAll();
-          toast('✅ Харилцах '+fmt(har)+' → '+fmt(t2));
-        }
-      }
-    }
-  }
+  const raw=prompt(info+'\n\nЗасах дүн (жишээ: 47241):','');
+  if(!raw||!raw.trim())return;
+  const t2=parseInt(raw.replace(/\D/g,''))||0;
+  if(!t2||t2===har)return;
+  const d=t2-har;
+  TXN.unshift(d>0
+    ?{id:uid(),type:'opening_balance',amt:d,subType:'card',date:nowDate(),datetime:nowDateTime(),desc:'Харилцах залруулга',_harAdj:true}
+    :{id:uid(),type:'expense',amt:-d,account:'card',cat:'Залруулга',date:nowDate(),datetime:nowDateTime(),desc:'Харилцах залруулга',_harAdj:true});
+  sT(CU.username,TXN);
+  if(initFB())fbDb.ref(VER+'/'+CU.username+'/txn').set(TXN);
+  setTimeout(()=>{renderAll();toast('Харилцах '+fmt(har)+' → '+fmt(t2));},300);
 }
 
 function clearLoanBalAdj(id){
