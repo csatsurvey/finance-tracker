@@ -2808,7 +2808,24 @@ function renderHeroDetails(bal){
   }
 }
 
+function autoFixBalAdj(){
+  // Залруулга бичилт байвал _balAdj:true автоматаар тохируулах (нэг удаа л)
+  if(window._balAdjFixed)return;
+  window._balAdjFixed=true;
+  const bad=TXN.filter(t=>!t._balAdj&&
+    ((t.desc||'').includes('тохируулга')||(t.desc||'').includes('залруулга'))&&
+    (t.type==='loan_pay'||t.type==='saving_out'));
+  if(bad.length>0){
+    bad.forEach(t=>{t._balAdj=true;});
+    sT(CU.username,TXN);
+    if(initFB())fbDb.ref(VER+'/'+CU.username+'/txn').set(TXN);
+    // Flag reset after save so next renderAll re-checks
+    setTimeout(()=>{window._balAdjFixed=false;},2000);
+    toast('✅ '+bad.length+' залруулга бичилт автоматаар засагдлаа. Харилцах: '+fmt(calcBal().har));
+  }
+}
 function renderAll(){
+  if(CU)autoFixBalAdj(); // Автомат засвар
   invalidateFilterCache();
   const bal=calcBal();
   const flow=calcFlow();
@@ -6979,6 +6996,10 @@ function renderMgr(){
 function renderMgrHome(){
   const el=document.getElementById('mgr-home');
   if(!el)return;
+  // Харилцах алдааны мэдэгдэл
+  const _har=calcBal().har;
+  const _adjCntAll=(TXN||[]).filter(t=>t._balAdj).length;
+  const _badAdj=(TXN||[]).filter(t=>!t._balAdj&&((t.desc||'').includes('тохируулга')||(t.desc||'').includes('залруулга'))&&(t.type==='loan_pay'||t.type==='saving_out')).length;
   // ── Тусгай бичилтийн товчнууд ──
   const txnBtns=[
     {ico:'🔄',lbl:'Шилжүүлэг',desc:'Карт ↔ Бэлэн',fn:"closeMgr();_eType='transfer';_es=2;document.getElementById('easy-bg').classList.add('on');easyRender();"},
@@ -6994,10 +7015,16 @@ function renderMgrHome(){
     {ico:'📢',lbl:'Санал',desc:'Санал, хүсэлт',tab:'feedback'},
     {ico:'🗑️',lbl:'Цэвэрлэх',desc:'Хуучин бичилт устгах',tab:'reset'},
   ];
+  // Diagnostic banner
+  let _diagBanner='';
+  if(_badAdj>0){
+    _diagBanner='<div class="info-box am" style="margin-bottom:12px">'+
+      '⚠️ <strong>'+_badAdj+'</strong> залруулга бичилт харилцахад нөлөөлж байна! '+
+      '<button onclick="diagHar()" style="background:var(--am);color:#fff;border:none;border-radius:6px;padding:3px 10px;cursor:pointer;font-family:Sora,sans-serif;font-size:12px">Засах</button></div>';
+  }
   const btnStyle='display:flex;flex-direction:column;align-items:flex-start;padding:14px;border:1.5px solid var(--bd);border-radius:12px;background:var(--sur);cursor:pointer;text-align:left;font-family:Sora,sans-serif;transition:.15s;';
   const mo='onmouseover="this.style.borderColor=\'var(--bl)\'" onmouseout="this.style.borderColor=\'var(--bd)\'"';
-  el.innerHTML=
-    '<div style="font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Тусгай бичилт</div>'+
+    el.innerHTML=_diagBanner+   '<div style="font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Тусгай бичилт</div>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">'+
       txnBtns.map(b=>
         '<button onclick="'+b.fn+'" style="'+btnStyle+'" '+mo+'>'+
@@ -7356,6 +7383,69 @@ function openEditAcc(type,id){
   }
 }
 
+// ══ ХАРИЛЦАХ DIAGNOSTIC ══
+function diagHar(){
+  let card=0,cash=0;
+  const loans={},savings={};
+  if(!ACCS){toast('Мэдээлэл ачааллаагүй');return;}
+  (ACCS.loans||[]).forEach(l=>{loans[l.id]=0;});
+  (ACCS.savings||[]).forEach(s=>{savings[s.id]=0;});
+  const problemTxns=[];
+  TXN.slice().reverse().forEach(t=>{
+    const a=t.amt||0;
+    const isCard=(t.account||'card')==='card';
+    const addHar=(v)=>{if(isCard)card+=v;else cash+=v;};
+    switch(t.type){
+      case 'income':   addHar(a);   break;
+      case 'expense':  addHar(-a);  break;
+      case 'opening_balance': if(t.subType==='cash')cash+=a;else card+=a; break;
+      case 'saving_in': if(!t.isExisting)addHar(-a);
+        if(t.savingId)savings[t.savingId]=(savings[t.savingId]||0)+a; break;
+      case 'saving_out': if(!t._balAdj)addHar(a);
+        if(t.savingId)savings[t.savingId]=(savings[t.savingId]||0)-a; break;
+      case 'loan_take': if(!t.isExisting)addHar(a);
+        if(t.loanId&&loans[t.loanId]!==undefined)loans[t.loanId]+=a; break;
+      case 'loan_pay':
+        if(!t._balAdj)addHar(-a);
+        {const pr=t.fromPrincipal||0;if(t.loanId&&loans[t.loanId]!==undefined)loans[t.loanId]-=pr;}
+        if(!t._balAdj&&((t.desc||'').includes('тохируулга')||(t.desc||'').includes('залруулга'))){
+          problemTxns.push(t);
+        }
+        break;
+      case 'loan_interest': if(t.loanId&&loans[t.loanId]!==undefined)loans[t.loanId]+=a; break;
+      case 'transfer': if(t.fromAccount==='card'){card-=a;cash+=a;}else{cash-=a;card+=a;} break;
+    }
+  });
+  const har=card+cash;
+  if(problemTxns.length>0){
+    const names=problemTxns.map(t=>'• '+fmt(t.amt)+' ('+t.desc+')').join(', ');
+    if(confirm('⚠️ '+problemTxns.length+' залруулга бичилт харилцахад буруу нөлөөлж байна: '+names+'. Засах уу?')){
+      problemTxns.forEach(t=>{t._balAdj=true;});
+      sT(CU.username,TXN);
+      if(initFB())fbDb.ref(VER+'/'+CU.username+'/txn').set(TXN);
+      renderAll();
+      toast('✅ '+problemTxns.length+' бичилт засагдлаа. Харилцах: '+fmt(calcBal().har));
+    }
+  } else {
+    const target=prompt('📊 Харилцах: '+fmt(har)+' | Карт: '+fmt(card)+' Бэлэн: '+fmt(cash)+'\nЗасах дүн оруулна уу (хоосон=зөвхөн харах):','');
+    if(target!==null&&target.trim()!==''){
+      const t2=parseInt(String(target).replace(/\D/g,''))||0;
+      if(t2>0&&Math.abs(t2-har)>1){
+        const d=t2-har;
+        if(d>0){
+          TXN.unshift({id:uid(),type:'opening_balance',amt:d,subType:'card',date:nowDate(),datetime:nowDateTime(),desc:'Харилцах залруулга (+'+fmt(d)+')'});
+        } else {
+          TXN.unshift({id:uid(),type:'expense',amt:Math.abs(d),account:'card',cat:'Залруулга',date:nowDate(),datetime:nowDateTime(),desc:'Харилцах залруулга (-'+fmt(Math.abs(d))+')'});
+        }
+        sT(CU.username,TXN);
+        if(initFB())fbDb.ref(VER+'/'+CU.username+'/txn').set(TXN);
+        renderAll();
+        toast('✅ Харилцах '+fmt(har)+' → '+fmt(t2)+' болов');
+      }
+    }
+  }
+}
+
 function clearLoanBalAdj(id){
   const l=ACCS.loans.find(x=>x.id===id);
   const name=l?l.name:'Зээл';
@@ -7708,6 +7798,21 @@ function fillFromRecurring(ri){
 // REFRESH + CHANGELOG
 // ═══════════════════════════════════════════════════
 const CHANGELOG=[
+  {ver:'5.105',date:'2026-06-14',items:[
+    '✅ Залруулга бичилт: app нээхэд автоматаар _balAdj=true тохируулна'
+  ]},
+  {ver:'5.104',date:'2026-06-14',items:[
+    '🔍 Тохиргоо: Харилцах засах мэдэгдэл + товч',
+    '🐛 Залруулга _balAdj автоматаар тохируулна'
+  ]},
+  {ver:'5.104',date:'2026-06-14',items:[
+    '🔍 Тохиргоо: Харилцах үлдэгдэл шалгах & засах',
+    '🐛 Залруулга TXN _balAdj=true автоматаар тохируулна'
+  ]},
+  {ver:'5.104',date:'2026-06-14',items:[
+    '🔍 Тохиргоо: Харилцах үлдэгдэл шалгах & засах товч нэмэгдлээ',
+    '🐛 Асуудалтай залруулга TXN автоматаар олж засна'
+  ]},
   {ver:'5.103',date:'2026-06-14',items:[
     '✅ Засах үйлдэлд хуучин залруулга автоматаар устаж, зөв дүнгээр шинэчлэгдэнэ'
   ]},
