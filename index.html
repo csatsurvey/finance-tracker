@@ -2,6 +2,9 @@
 <html lang="mn">
 <head>
 <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -8596,7 +8599,30 @@ window.addEventListener('DOMContentLoaded',()=>{
   // Service Worker — жинхэнэ ./sw.js файлаас бүртгэнэ
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('./sw.js',{scope:'./'})
-      .then(()=>{}).catch(()=>{});
+      .then(reg=>{
+        // SW шинэчлэлт байгаа эсэх хянах
+        reg.addEventListener('updatefound',()=>{
+          const newSW=reg.installing;
+          if(newSW){
+            newSW.addEventListener('statechange',()=>{
+              if(newSW.state==='installed'&&navigator.serviceWorker.controller){
+                // Шинэ хувилбар бэлэн — автоматаар reload
+                setTimeout(()=>window.location.reload(),500);
+              }
+            });
+          }
+        });
+      }).catch(()=>{});
+    // SW-с ирсэн шинэчлэлтийн мессежийг сонсох
+    navigator.serviceWorker.addEventListener('message',e=>{
+      if(e.data&&e.data.type==='SW_UPDATED'){
+        window.location.reload();
+      }
+    });
+    // Тогтмол шинэчлэлт шалгах (15 минут тутамд)
+    setInterval(()=>{
+      navigator.serviceWorker.getRegistration().then(r=>{if(r)r.update();});
+    },15*60*1000);
   }
     // PWA install prompt handler
   window.addEventListener('beforeinstallprompt', e => {
