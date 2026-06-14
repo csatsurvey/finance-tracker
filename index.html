@@ -648,7 +648,7 @@ body{background:var(--bg);color:var(--tx);font-family:'Sora',sans-serif;font-siz
 <div class="scr" id="s-app">
  <div class="aw">
   <div class="topbar">
-    <div class="topbar-logo">Миний <em>Санхүү</em></div>
+    <div class="topbar-logo">Миний <em>Санхүү</em><span id="app-ver-show" style="font-size:9px;font-weight:400;opacity:.5;margin-left:4px"></span></div>
     <div class="topbar-r">
       <div class="chip" id="app-uname"></div>
     </div>
@@ -2849,6 +2849,9 @@ function autoFixBalAdj(){
 }
 
 function renderAll(){
+  // Хувилбар харуулах
+  const verEl=document.getElementById('app-ver-show');
+  if(verEl)verEl.textContent=APP_VERSION;
   if(CU){
     autoFixBalAdj(); // Автомат засвар
     // Har шалгах: нэг удаа л автоматаар diagHar санал болгох
@@ -7436,40 +7439,81 @@ function diagHar(){
   const bal=calcBal();
   const har=bal.har;
 
-  // Бүх залруулга бичилтийг тоолох
-  const adjTxns=TXN.filter(t=>
-    t._balAdj||t._harAdj||t._auto||
-    (t.type==='loan_interest')||
-    ((t.desc||'').indexOf('тохируулга')>=0)||
-    ((t.desc||'').indexOf('залруулга')>=0&&(t.type==='expense'||t.type==='opening_balance'||t.type==='loan_pay'||t.type==='saving_out'))
-  );
+  // Харилцахад нөлөөлдөг бүх TXN-г хроно дарааллаар шалгах
+  let card=0, cash=0;
+  const log=[];
 
-  let msg='Харилцах: '+fmt(har)+'\n';
-  msg+='(Зөв дүн: ₮47,241 гэж хэлсэн)\n\n';
-  msg+='Устгах залруулга бичилтүүд ('+adjTxns.length+' ш):\n';
-  adjTxns.slice(0,8).forEach(t=>{
-    msg+='  ['+t.type+']: '+fmt(t.amt)+'  '+( t.desc||'').substring(0,20)+'\n';
+  TXN.slice().reverse().forEach(t=>{
+    const a=t.amt||0;
+    const isCard=(t.account||'card')==='card';
+    let delta=0;
+    switch(t.type){
+      case 'income':         if(isCard)card+=a; else cash+=a; delta=isCard?a:0; break;
+      case 'expense':        if(isCard)card-=a; else cash-=a; delta=isCard?-a:0; break;
+      case 'opening_balance': if(t.subType==='cash')cash+=a; else{card+=a;delta=a;} break;
+      case 'saving_in':
+        if(!t.isExisting){if(isCard)card-=a;else cash-=a;delta=isCard?-a:0;}
+        break;
+      case 'saving_out':
+        if(!t._balAdj){if(isCard)card+=a;else cash+=a;delta=isCard?a:0;}
+        break;
+      case 'loan_take':
+        if(!t.isExisting){if(isCard)card+=a;else cash+=a;delta=isCard?a:0;}
+        break;
+      case 'loan_pay':
+        if(!t._balAdj){if(isCard)card-=a;else cash-=a;delta=isCard?-a:0;}
+        break;
+      case 'transfer':
+        if(t.fromAccount==='card'){card-=a;cash+=a;delta=-a;}
+        else{cash-=a;card+=a;delta=0;}
+        break;
+    }
+    if(delta!==0){
+      const suspicious=
+        ((t.desc||'').indexOf('тохируулга')>=0||(t.desc||'').indexOf('залруулга')>=0)||
+        (t.type==='saving_out'&&!t._balAdj&&((t.desc||'').indexOf('тохируулга')>=0||(t.desc||'').indexOf('залруулга')>=0))||
+        (t.type==='loan_take'&&!t.isExisting&&((t.desc||'').indexOf('тохируулга')>=0||(t.desc||'').indexOf('залруулга')>=0));
+      log.push({id:t.id,date:t.date,type:t.type,desc:(t.desc||'').substring(0,22),
+        delta,har:card+cash,suspicious,
+        _balAdj:!!t._balAdj,isExisting:!!t.isExisting});
+    }
   });
-  if(adjTxns.length>8)msg+='  ...бас '+(adjTxns.length-8)+' бичилт\n';
-  msg+='\nЭдгээрийг устгаад зөв үлдэгдэл тооцоолох уу?';
 
-  if(!confirm(msg))return;
+  // Suspicious TXN
+  const badOnes=log.filter(l=>l.suspicious);
+  const lastFew=log.slice(-10).reverse();
 
-  // Устгах
-  const adjIds=new Set(adjTxns.map(t=>t.id));
-  TXN=TXN.filter(t=>!adjIds.has(t.id));
+  let msg='Харилцах: '+fmt(card+cash)+' (Карт:'+fmt(card)+' Бэлэн:'+fmt(cash)+')\n';
+  msg+='Нийт нөлөөтэй бичилт: '+log.length+'ш\n\n';
+  if(badOnes.length>0){
+    msg+='⚠️ Сэжигтэй бичилт ('+badOnes.length+'ш):\n';
+    badOnes.forEach(l=>{
+      const sign=l.delta>0?'+':'';
+      msg+='  '+l.date+' ['+l.type+']: '+sign+fmt(Math.abs(l.delta))+'  '+l.desc+'\n';
+    });
+    msg+='\n';
+  }
+  msg+='Сүүлийн 10 нөлөөтэй бичилт:\n';
+  lastFew.forEach(l=>{
+    const sign=l.delta>0?'+':'-';
+    msg+='  '+l.date+' '+sign+fmt(Math.abs(l.delta))+' → '+fmt(l.har)+'  ['+l.type+']\n';
+  });
+  msg+='\nЗасах дүн оруулна уу (одоо: '+fmt(card+cash)+'):';
 
-  // Хадгалах
+  const raw=prompt(msg,'');
+  if(!raw||!raw.trim())return;
+  const t2=parseInt(raw.replace(/\D/g,''))||0;
+  if(!t2)return;
+  const diff=t2-(card+cash);
+  if(Math.abs(diff)<1){toast('Зөрүү байхгүй');return;}
+  TXN.unshift(diff>0
+    ?{id:uid(),type:'opening_balance',amt:diff,subType:'card',
+      date:nowDate(),datetime:nowDateTime(),desc:'Харилцах залруулга +'+fmt(diff),_harAdj:true}
+    :{id:uid(),type:'expense',amt:-diff,account:'card',cat:'Залруулга',
+      date:nowDate(),datetime:nowDateTime(),desc:'Харилцах залруулга -'+fmt(-diff),_harAdj:true});
   sT(CU.username,TXN);
   if(initFB())fbDb.ref(VER+'/'+CU.username+'/txn').set(TXN);
-  window._balAdjFixed=false;
-  window._harChecked=false;
-
-  setTimeout(()=>{
-    renderAll();
-    const newHar=calcBal().har;
-    toast('✅ '+adjTxns.length+' бичилт устгагдлаа. Харилцах: '+fmt(newHar));
-  },500);
+  setTimeout(()=>{renderAll();toast('✅ Харилцах '+fmt(card+cash)+' → '+fmt(t2));},300);
 }
 
 function clearLoanBalAdj(id){
@@ -8619,7 +8663,9 @@ window.addEventListener('DOMContentLoaded',()=>{
         window.location.reload();
       }
     });
-    // Тогтмол шинэчлэлт шалгах (15 минут тутамд)
+    // Нээхэд ШУУД шинэчлэлт шалгах
+    navigator.serviceWorker.getRegistration().then(r=>{if(r)r.update();});
+    // Тогтмол шинэчлэлт (15 минут)
     setInterval(()=>{
       navigator.serviceWorker.getRegistration().then(r=>{if(r)r.update();});
     },15*60*1000);
@@ -8638,7 +8684,8 @@ window.addEventListener('DOMContentLoaded',()=>{
   // License event bind
   licBindEvents();
   // App version шалгаж кэш цэвэрлэх
-  const APP_VERSION='v6.00';
+  const APP_VERSION='v5.112';
+console.log('%c Миний Санхүү '+APP_VERSION,'background:#3b82f6;color:#fff;padding:2px 6px;border-radius:4px');
   const savedVersion=localStorage.getItem('app_version');
   if(savedVersion&&savedVersion!==APP_VERSION){
     // Хуучин version — кэш цэвэрлэж шинэ файл татна
