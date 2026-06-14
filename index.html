@@ -1964,7 +1964,7 @@ function calcBal(){
         }
         break;
       case 'saving_out':
-        addHar(a);
+        if(!t._balAdj)addHar(a); // _balAdj=true бол карт нэмэхгүй (залруулга)
         if(t.savingId!==undefined){
           if(savings[t.savingId]===undefined)savings[t.savingId]=0;
           savings[t.savingId]-=a;
@@ -1983,7 +1983,7 @@ function calcBal(){
         if(t.loanId!==undefined&&loans[t.loanId]!==undefined)loans[t.loanId]+=a;
         break;
       case 'loan_pay':
-        addHar(-a);
+        if(!t._balAdj)addHar(-a); // _balAdj=true бол карт хасахгүй (залруулга)
         {const pr2=t.fromPrincipal||0;
         if(t.loanId!==undefined&&loans[t.loanId]!==undefined)loans[t.loanId]-=pr2;}
         break;
@@ -2015,13 +2015,13 @@ function calcFlow(){
     if(t.type==='income')inc+=a;
     if(t.type==='expense')exp+=a;
     if(t.type==='saving_interest')savInt+=a; // хадгаламжийн хүү — харилцахд нөлөөлөхгүй, тусдаа
-    if(t.type==='loan_pay')loanInt+=(t.fromInterest||0);
+    if(t.type==='loan_pay'&&!t._balAdj)loanInt+=(t.fromInterest||0);
     // loan_interest нь loan_pay.fromInterest-ээр тооцогдоно — давхар тооцохгүй
     // if(t.type==='loan_interest')loanInt+=a;
-    if(t.type==='saving_in'&&!t.isExisting)savIn+=a;
+    if(t.type==='saving_in'&&!t.isExisting&&!t._balAdj)savIn+=a;
     if(t.type==='saving_out')savOut+=a;
     if(t.type==='loan_take'&&!t.isExisting)loanTake+=a;
-    if(t.type==='loan_pay')loanPay+=(t.fromPrincipal||0);
+    if(t.type==='loan_pay'&&!t._balAdj)loanPay+=(t.fromPrincipal||0);
     if(t.type==='opening_balance')openBal+=a;
   });
   // Мөнгөний урсгал (мөнгөний бодит хөдөлгөөн):
@@ -3900,6 +3900,7 @@ function renderList(){
     const extra=loanN||savN;
     // loan_pay: дэлгэрэнгүй үзүүлэх
     let amtDisp=m.sign+fmt(t.amt);
+    if(t._balAdj)amtDisp='[⚖️ '+fmt(t.amt)+']'; // Залруулга тэмдэглэгдэнэ
     let subDisp='';
     if(t.type==='loan_pay'&&t.fromPrincipal!==undefined){
       subDisp='үндсэн '+fmt(t.fromPrincipal||0)+(t.fromInterest?' + хүү '+fmt(t.fromInterest):'');
@@ -7669,6 +7670,12 @@ function fillFromRecurring(ri){
 // REFRESH + CHANGELOG
 // ═══════════════════════════════════════════════════
 const CHANGELOG=[
+  {ver:'6.00',date:'2026-06-14',items:[
+    '🐛 Зээлийн үлдэгдэл буурах залруулгад харилцах өөрчлөгдөхгүй',
+    '🐛 Хадгаламж залруулгад харилцах өөрчлөгдөхгүй',
+    '🐛 Залруулга TXN тайлан/урсгалд тооцогдохгүй',
+    '⚖️ Залруулга бичилтүүд тэмдэглэгдэнэ'
+  ]},
   {ver:'5.96',date:'2026-06-14',items:[
     '🗑️ Эргэн төлөлтийн хуваарь, төлөлтийн өдөр бүрэн хасагдлаа',
     '✏️ Нийт зээлсэн дүн засах боломжтой болсон'
@@ -8417,7 +8424,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   // License event bind
   licBindEvents();
   // App version шалгаж кэш цэвэрлэх
-  const APP_VERSION='v5.99';
+  const APP_VERSION='v6.00';
   const savedVersion=localStorage.getItem('app_version');
   if(savedVersion&&savedVersion!==APP_VERSION){
     // Хуучин version — кэш цэвэрлэж шинэ файл татна
