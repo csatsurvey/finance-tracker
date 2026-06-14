@@ -2846,7 +2846,21 @@ function autoFixBalAdj(){
 }
 
 function renderAll(){
-  if(CU)autoFixBalAdj(); // Автомат засвар
+  if(CU){
+    autoFixBalAdj(); // Автомат засвар
+    // Har шалгах: нэг удаа л автоматаар diagHar санал болгох
+    if(!window._harChecked){
+      window._harChecked=true;
+      setTimeout(()=>{
+        const har=calcBal().har;
+        if(Math.abs(har)>200000||har<0){
+          // Том зөрүүтэй бол мэдэгдэл гаргах
+          const wb=document.getElementById('har-warn');
+          if(wb)wb.style.display='block';
+        }
+      },2000);
+    }
+  }
   invalidateFilterCache();
   const bal=calcBal();
   const flow=calcFlow();
@@ -7426,16 +7440,13 @@ function diagHar(){
     if(t.type==='saving_in'&&!t.isExisting)return true;
     return false;
   });
-  const info='Харилцах: '+fmt(har)+' | Карт:'+fmt(bal.card)+' Бэлэн:'+fmt(bal.cash)+
-    (badTxns.length>0?'\n\nБуруу залруулга: '+badTxns.length+' ш олдлоо':'');
-  if(badTxns.length>0&&confirm(info+'\n\nЗасах уу?')){
+  if(badTxns.length>0&&confirm('Харилцах: '+fmt(har)+'\nБуруу бичилт: '+badTxns.length+' ш\nЗасах уу?')){
     badTxns.forEach(t=>{if(t.type==='loan_pay')t._balAdj=true;else t.isExisting=true;});
-    sT(CU.username,TXN);
-    if(initFB())fbDb.ref(VER+'/'+CU.username+'/txn').set(TXN);
+    sT(CU.username,TXN);if(initFB())fbDb.ref(VER+'/'+CU.username+'/txn').set(TXN);
     setTimeout(()=>{renderAll();toast('Засагдлаа! Харилцах: '+fmt(calcBal().har));},300);
     return;
   }
-  const raw=prompt(info+'\n\nЗасах дүн (жишээ: 47241):','');
+  const raw=prompt('Харилцах одоо: '+fmt(har)+'\nЗөв дүн оруулна уу:','');
   if(!raw||!raw.trim())return;
   const t2=parseInt(raw.replace(/\D/g,''))||0;
   if(!t2||t2===har)return;
@@ -7443,9 +7454,10 @@ function diagHar(){
   TXN.unshift(d>0
     ?{id:uid(),type:'opening_balance',amt:d,subType:'card',date:nowDate(),datetime:nowDateTime(),desc:'Харилцах залруулга',_harAdj:true}
     :{id:uid(),type:'expense',amt:-d,account:'card',cat:'Залруулга',date:nowDate(),datetime:nowDateTime(),desc:'Харилцах залруулга',_harAdj:true});
-  sT(CU.username,TXN);
-  if(initFB())fbDb.ref(VER+'/'+CU.username+'/txn').set(TXN);
-  setTimeout(()=>{renderAll();toast('Харилцах '+fmt(har)+' → '+fmt(t2));},300);
+  sT(CU.username,TXN);if(initFB())fbDb.ref(VER+'/'+CU.username+'/txn').set(TXN);
+  const wb=document.getElementById('har-warn');if(wb)wb.style.display='none';
+  window._harChecked=false;
+  setTimeout(()=>{renderAll();toast('Харилцах '+fmt(har)+' \u2192 '+fmt(t2));},300);
 }
 
 function clearLoanBalAdj(id){
