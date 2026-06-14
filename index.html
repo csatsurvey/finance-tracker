@@ -7354,37 +7354,44 @@ function openEditAcc(type,id){
 
 function saveEditSav(id){
   const sv=ACCS.savings.find(s=>s.id===id);if(!sv)return;
-  const n=document.getElementById('ea-name').value.trim();
-  if(n)sv.name=n;
-  sv.rate=parseFloat(document.getElementById('ea-rate').value)||0;
-  sv.months=parseInt(document.getElementById('ea-months').value)||0;
-  sv.goal=pAmt(document.getElementById('ea-goal').value)||0;
-  const bEl=document.getElementById('ea-bank');
-  const aEl=document.getElementById('ea-accno');
-  const dEl=document.getElementById('ea-date');
-  const edEl=document.getElementById('ea-enddate');
-  if(bEl)sv.bank=bEl.value||sv.bank||'';
-  if(aEl)sv.accno=aEl.value||sv.accno||'';
-  if(dEl&&dEl.value)sv.createdAt=dEl.value;
-  if(edEl&&edEl.value)sv.endDate=edEl.value;
-  // Одоогийн үлдэгдэл шинэчлэх
-  const sbEl=document.getElementById('ea-sav-bal');
-  const newSb=sbEl?pAmt(sbEl.value):0;
-  if(newSb>=0&&sbEl&&sbEl.value.trim()!==''){
-    const bal=calcBal();const curSb=bal.savings[id]||0;
-    const diff=newSb-curSb;
-    if(Math.abs(diff)>0){
-      if(diff>0){
-        TXN.unshift({id:uid(),type:'saving_in',amt:diff,savingId:id,isExisting:true,
+  // 1. ЭХЛЭЭД бүгдийг DOM-оос уших
+  const _n   =(document.getElementById('ea-name')?.value||'').trim();
+  const _rate =parseFloat(document.getElementById('ea-rate')?.value)||0;
+  const _months=parseInt(document.getElementById('ea-months')?.value)||0;
+  const _goal =pAmt(document.getElementById('ea-goal')?.value||'0');
+  const _bank =(document.getElementById('ea-bank')?.value||'').trim();
+  const _accno=(document.getElementById('ea-accno')?.value||'').trim();
+  const _date =document.getElementById('ea-date')?.value||'';
+  const _edate=document.getElementById('ea-enddate')?.value||'';
+  const _sbVal=(document.getElementById('ea-sav-bal')?.value||'').trim();
+  const _newSb=pAmt(_sbVal);
+  // 2. ACCS шинэчлэх
+  if(_n)sv.name=_n;
+  sv.rate=_rate; sv.months=_months; sv.goal=_goal;
+  if(_bank)sv.bank=_bank;
+  if(_accno)sv.accno=_accno;
+  if(_date)sv.createdAt=_date;
+  if(_edate)sv.endDate=_edate;
+  // 3. Үлдэгдэл тохируулга TXN
+  if(_sbVal!==''){
+    const _curSb=calcBal().savings[id]||0;
+    const _diff=_newSb-_curSb;
+    if(Math.abs(_diff)>1){
+      if(_diff>0){
+        TXN.unshift({id:uid(),type:'saving_in',amt:_diff,savingId:id,isExisting:true,
           date:nowDate(),datetime:nowDateTime(),desc:sv.name+' үлдэгдэл тохируулга',account:'card'});
       } else {
-        TXN.unshift({id:uid(),type:'saving_out',amt:Math.abs(diff),savingId:id,
+        TXN.unshift({id:uid(),type:'saving_out',amt:Math.abs(_diff),savingId:id,
           date:nowDate(),datetime:nowDateTime(),desc:sv.name+' үлдэгдэл залруулга',account:'card'});
       }
       sT(CU.username,TXN);
     }
   }
-  sA(CU.username,ACCS);renderMgr();renderAll();toast('✅ Хадгаламж шинэчлэгдлээ');
+  // DOM-г эхлээд уншсан тул энд зөвхөн хадгалж хаана
+  sA(CU.username,ACCS);
+  renderAll();
+  closeMgr();
+  toast('✅ '+sv.name+' шинэчлэгдлээ');
 }
 function eaPayFreqChange(){
   const f=document.getElementById('ea-payfreq');
@@ -7393,49 +7400,46 @@ function eaPayFreqChange(){
 }
 function saveEditLoan(id){
   const l=ACCS.loans.find(x=>x.id===id);if(!l)return;
-  const n=document.getElementById('ea-name').value.trim();
-  if(n)l.name=n;
-  l.rate=parseFloat(document.getElementById('ea-rate').value)||0;
-  l.months=parseInt(document.getElementById('ea-months').value)||0;
-  l.fixedPay=0;
-  // Нэмэлт талбарууд
-  const bEl=document.getElementById('ea-bank');
-  const aEl=document.getElementById('ea-accno');
-  const sdEl=document.getElementById('ea-startdate');
-  const edEl=document.getElementById('ea-enddate');
-  if(bEl)l.bank=bEl.value||l.bank;
-  if(aEl)l.accno=aEl.value||l.accno;
-  if(sdEl&&sdEl.value)l.createdAt=sdEl.value;
-  if(edEl&&edEl.value)l.endDate=edEl.value;
-  // Зээлийн үлдэгдэл шинэчлэх
-  const balEl=document.getElementById('ea-balance');
-  const newBal=balEl?pAmt(balEl.value):0;
-  if(newBal>0){
-    // Шинэ баланс = одоогийн баланс + (newBal - currentBal)
-    const bal=calcBal();const lb=bal.loans[id]||0;
-    const diff=newBal-lb;
-    if(Math.abs(diff)>0){
-      // Баланс тохируулах тусгай TXN
-      const adjId=uid();
-      if(diff>0){
-        // Баланс нэмэгдсэн (нэмэгдсэн хүү гэх мэт)
-        TXN.unshift({id:adjId,type:'loan_take',amt:diff,loanId:id,isExisting:true,
+  // 1. ЭХЛЭЭД бүгдийг DOM-оос уших (sT/sA дуудахаас өмнө!)
+  const _n =(document.getElementById('ea-name')?.value||'').trim();
+  const _rate =parseFloat(document.getElementById('ea-rate')?.value)||0;
+  const _months=parseInt(document.getElementById('ea-months')?.value)||0;
+  const _bank =(document.getElementById('ea-bank')?.value||'').trim();
+  const _accno=(document.getElementById('ea-accno')?.value||'').trim();
+  const _sd  =document.getElementById('ea-startdate')?.value||'';
+  const _ed  =document.getElementById('ea-enddate')?.value||'';
+  const _newBal=pAmt(document.getElementById('ea-balance')?.value||'0');
+  const _newPr =pAmt(document.getElementById('ea-principal')?.value||'0');
+  // 2. ACCS объект шинэчлэх
+  if(_n)l.name=_n;
+  l.rate=_rate; l.months=_months; l.fixedPay=0;
+  if(_bank)l.bank=_bank;
+  if(_accno)l.accno=_accno;
+  if(_sd)l.createdAt=_sd;
+  if(_ed)l.endDate=_ed;
+  if(_newPr>0)l.principal=_newPr;
+  // 3. Үлдэгдэл тохируулга TXN
+  if(_newBal>0){
+    const _curLb=calcBal().loans[id]||0;
+    const _diff=_newBal-_curLb;
+    if(Math.abs(_diff)>1){
+      if(_diff>0){
+        TXN.unshift({id:uid(),type:'loan_take',amt:_diff,loanId:id,isExisting:true,
           date:nowDate(),datetime:nowDateTime(),desc:l.name+' үлдэгдэл тохируулга'});
       } else {
-        // Баланс буурсан (залруулга)
-        TXN.unshift({id:adjId,type:'loan_pay',amt:Math.abs(diff),loanId:id,
-          fromPrincipal:Math.abs(diff),fromInterest:0,payMode:'manual',
-          date:nowDate(),datetime:nowDateTime(),desc:l.name+' үлдэгдэл залруулга',account:'card',
-          _balAdj:true});
+        TXN.unshift({id:uid(),type:'loan_pay',amt:Math.abs(_diff),loanId:id,
+          fromPrincipal:Math.abs(_diff),fromInterest:0,payMode:'manual',
+          date:nowDate(),datetime:nowDateTime(),desc:l.name+' үлдэгдэл залруулга',
+          account:'card',_balAdj:true});
       }
       sT(CU.username,TXN);
     }
   }
-  // Нийт зээлсэн дүн засах
-  const prEl=document.getElementById('ea-principal');
-  const newPr=prEl?pAmt(prEl.value):0;
-  if(newPr>0)l.principal=newPr;
-  sA(CU.username,ACCS);renderMgr();renderAll();toast('✅ Зээл шинэчлэгдлээ');
+  // 4. Хадгалж хаах
+  sA(CU.username,ACCS);
+  renderAll();
+  closeMgr(); // Цонх хаах
+  toast('✅ '+l.name+' шинэчлэгдлээ. Нийт зээлсэн: '+fmt(_newPr>0?_newPr:l.principal));
 }
 
 function editLoanName(id){
@@ -8413,7 +8417,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   // License event bind
   licBindEvents();
   // App version шалгаж кэш цэвэрлэх
-  const APP_VERSION='v5.98';
+  const APP_VERSION='v5.99';
   const savedVersion=localStorage.getItem('app_version');
   if(savedVersion&&savedVersion!==APP_VERSION){
     // Хуучин version — кэш цэвэрлэж шинэ файл татна
