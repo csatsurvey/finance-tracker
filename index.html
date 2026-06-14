@@ -3411,13 +3411,12 @@ function renderLoanCards(bal){
           (!isClosed?'<button onclick="openEasyLoanPay(\''+l.id+'\')"'+
             ' style="flex:1;padding:9px;background:linear-gradient(135deg,#c97a72,#ed9a91);color:#fff;border:none;border-radius:9px;font-family:Sora,sans-serif;font-size:12px;font-weight:600;cursor:pointer">'+
             '\uD83D\uDCB3 \u0417\u044D\u044D\u043B \u0442\u04E9\u043B\u04E9\u0445</button>':'')+
-          (l.rate>0&&l.months>0&&!isClosed?'<button class="aei-btn" data-lid="'+l.id+'" onclick="toggleLoanSched(this.dataset.lid)">'+
-            '\uD83D\uDCC5</button>':'')+
+          
           '<button onclick="showAccLog(\'loan\',\''+l.id+'\',\''+l.name+'\')"'+
             ' style="padding:9px 12px;background:var(--sur);color:var(--tx2);border:1.5px solid var(--bd);border-radius:9px;font-family:Sora,sans-serif;font-size:12px;cursor:pointer">'+
             '\uD83D\uDCCB \u0422\u04AF\u04AF\u0445</button>'+
         '</div>'+
-        '<div id="ls-'+l.id+'" style="display:none;margin-top:10px"></div>'+
+        ''+
       '</div>'+
     '</div>';
   }).join('');
@@ -4402,7 +4401,7 @@ function buildAccModal(){
       '<div class="f-grp"><div class="f-lbl">Зээл авсан огноо</div><input class="f-in" id="acc-startdate" type="date" oninput="accCalcEndFromStart()"></div>'+
       '<div class="f-grp"><div class="f-lbl">Зээл дуусах огноо</div><input class="f-in" id="acc-enddate" type="date" oninput="accCalcMonthsFromDates()"></div>'+
     '</div>';
-    h+='<div style="border-top:1px solid var(--bd);margin:4px 0 8px;padding-top:10px"><div style="font-size:11px;font-weight:700;color:var(--tx3);margin-bottom:8px">📅 Төлөлтийн тохиргоо</div><div class="f-row g2"><div class="f-grp"><div class="f-lbl">Давтамж</div><select class="f-in" id="acc-payfreq" onchange="accPayFreqChange()"><option value="monthly">Сар бүр (нэг удаа)</option><option value="bimonthly">Сард 2 удаа</option></select></div><div class="f-grp"><div class="f-lbl">Төлөх өдөр</div><input class="f-in" id="acc-payday" type="text" placeholder="25" value="25"></div></div><div class="f-grp" id="acc-payday2-wrap" style="display:none"><div class="f-lbl">2-р төлөх өдөр</div><input class="f-in" id="acc-payday2" type="text" placeholder="30" value="30"></div></div>';
+    h+='';
 
     h+='<div class="m-acts"><button class="btn-sec" onclick="closeAccModal()">Болих</button><button class="btn-pri" onclick="saveLoanAcc(true)">✨ Шинэ зээл авах →</button></div>';
   }
@@ -4418,7 +4417,7 @@ function buildAccModal(){
       '<div class="f-grp"><div class="f-lbl">Зээл дуусах огноо</div><input class="f-in" id="acc-enddate" type="date" oninput="accCalcMonthsFromEnd()"></div>'+
     '</div>';
     h+='<div class="f-grp"><div class="f-lbl">Хугацаа (сар) <span style="font-size:10px;color:var(--tx3)">— огнооноос автоматаар</span></div><input class="f-in" id="acc-months" type="number" min="1" placeholder="27" readonly style="background:var(--sur2);color:var(--tx3)"></div>';
-    h+='<div style="border-top:1px solid var(--bd);margin:4px 0 8px;padding-top:10px"><div style="font-size:11px;font-weight:700;color:var(--tx3);margin-bottom:8px">📅 Төлөлтийн тохиргоо</div><div class="f-row g2"><div class="f-grp"><div class="f-lbl">Давтамж</div><select class="f-in" id="acc-payfreq" onchange="accPayFreqChange()"><option value="monthly">Сар бүр (нэг удаа)</option><option value="bimonthly">Сард 2 удаа</option></select></div></div>';
+    h+='';
     h+='<div class="calc-box am" id="acc-calc" style="line-height:2"></div>';
     h+='<div id="loan-schedule-wrap" style="display:none;margin-top:12px"></div>';
     h+='<div class="m-acts"><button class="btn-sec" onclick="closeAccModal()">Болих</button><button class="btn-pri" onclick="saveLoanAcc(false)">Зээл бүртгэх →</button></div>';
@@ -7259,89 +7258,100 @@ function renderMgrAccounts(){
 
 function openEditAccBtn(btn){openEditAcc(btn.getAttribute('data-type'),btn.getAttribute('data-id'));}
 function openEditAcc(type,id){
-  // Тохиргоо modal нээж, accounts section рүү шилжих
   const bg=document.getElementById('mgr-bg');
-  if(bg&&!bg.classList.contains('on')){
-    // Тохиргоо modal нээгдээгүй байвал нээх
+  const _openEl=()=>{
     document.querySelectorAll('.mgr-section').forEach(s=>s.classList.remove('on'));
     const acEl=document.getElementById('mgr-accounts');
     if(acEl)acEl.classList.add('on');
     const ttlEl=document.querySelector('.modal-ttl');
-    if(ttlEl)ttlEl.textContent='⚙️ Тохиргоо – '+(type==='saving'?'Хадгаламж засах':'Зээл засах');
-    renderMgr();
-    bg.classList.add('on');
-  } else {
-    // Modal нээлттэй байвал accounts section рүү шилжих
-    document.querySelectorAll('.mgr-section').forEach(s=>s.classList.remove('on'));
-    const acEl=document.getElementById('mgr-accounts');
-    if(acEl)acEl.classList.add('on');
-  }
+    if(ttlEl)ttlEl.textContent='⚙️ '+(type==='saving'?'Хадгаламж засах':'Зээл засах');
+  };
+  if(bg&&!bg.classList.contains('on')){_openEl();renderMgr();bg.classList.add('on');}
+  else _openEl();
   const el=document.getElementById('mgr-accounts');
   if(!el)return;
+
+  // ══ ХАДГАЛАМЖ ЗАСАХ ══
   if(type==='saving'){
     const sv=ACCS.savings.find(s=>s.id===id);if(!sv)return;
-    const bal=calcBal();
-    const sb=bal.savings[sv.id]||0;
+    const bal=calcBal();const sb=bal.savings[sv.id]||0;
     el.innerHTML=
-      '<div style="font-size:13px;font-weight:600;margin-bottom:14px">💎 Хадгаламж засах</div>'+
-      '<div class="f-row g1"><div class="f-grp"><div class="f-lbl">Нэр</div>'+
-        '<input class="f-in" id="ea-name" value="'+sv.name.replace(/"/g,"&quot;")+'"></div></div>'+
+      '<div style="font-size:13px;font-weight:600;margin-bottom:10px">💎 Хадгаламж засах</div>'+
+      bankSelectHtml('Банк','ea-bank','Дансны дугаар','ea-accno','5021333444')+
+      '<div class="f-grp"><div class="f-lbl">Хадгаламжийн нэр *</div>'+
+        '<input class="f-in" id="ea-name" value="'+sv.name.replace(/"/g,'&quot;')+'"></div>'+
+      '<div class="f-row g2">'+
+        '<div class="f-grp"><div class="f-lbl">Одоогийн үлдэгдэл</div>'+
+          '<input class="f-in" id="ea-sav-bal" type="text" inputmode="numeric" oninput="fmtI(this)" value="'+sb.toLocaleString()+'"></div>'+
+        '<div class="f-grp"><div class="f-lbl">Зорилтот дүн</div>'+
+          '<input class="f-in" id="ea-goal" type="text" inputmode="numeric" oninput="fmtI(this)" value="'+(sv.goal?(sv.goal).toLocaleString():'')+'">'+          '</div>'+
+      '</div>'+
       '<div class="f-row g2">'+
         '<div class="f-grp"><div class="f-lbl">Сарын хүү %</div>'+
           '<input class="f-in" id="ea-rate" type="number" step="0.01" min="0" value="'+(sv.rate||0)+'"></div>'+
         '<div class="f-grp"><div class="f-lbl">Хугацаа (сар)</div>'+
           '<input class="f-in" id="ea-months" type="number" min="0" value="'+(sv.months||0)+'"></div>'+
       '</div>'+
-      '<div class="f-row g1"><div class="f-grp"><div class="f-lbl">Зорилтот дүн</div>'+
-        '<input class="f-in" id="ea-goal" type="text" oninput="fmtI(this)" value="'+(sv.goal?(sv.goal).toLocaleString():'')+'">'+
-        '<div style="font-size:10px;color:var(--tx3);margin-top:3px">Одоогийн үлдэгдэл: <strong>'+fmt(sb)+'</strong></div></div></div>'+
+      '<div class="f-row g2">'+
+        '<div class="f-grp"><div class="f-lbl">Нээсэн огноо</div>'+
+          '<input class="f-in" id="ea-date" type="date" value="'+(sv.createdAt||'')+'"></div>'+
+        '<div class="f-grp"><div class="f-lbl">Дуусах огноо</div>'+
+          '<input class="f-in" id="ea-enddate" type="date" value="'+(sv.endDate||'')+'"></div>'+
+      '</div>'+
       '<div class="m-acts">'+
         '<button class="btn-sec" onclick="renderMgr()">Болих</button>'+
-        '<button class="btn-pri" data-id="'+id+'" onclick="saveEditSav(this.dataset.id)">Хадгалах</button>'+
+        '<button class="btn-pri" data-id="'+id+'" onclick="saveEditSav(this.dataset.id)">💾 Хадгалах</button>'+
       '</div>';
+    setTimeout(()=>{
+      const bEl=document.getElementById('ea-bank');
+      const aEl=document.getElementById('ea-accno');
+      if(bEl&&sv.bank)bEl.value=sv.bank;
+      if(aEl)aEl.value=sv.accno||'';
+    },50);
+
+  // ══ ЗЭЭЛ ЗАСАХ ══
   }else{
     const l=ACCS.loans.find(x=>x.id===id);if(!l)return;
-    const bal=calcBal();
-    const lb=bal.loans[l.id]||0;
+    const bal=calcBal();const lb=bal.loans[l.id]||0;
     const _lf=l.payFreq||'monthly';
-    const _ld1=l.payDay||25;
-    const _ld2=l.payDay2||30;
-    const _lfp=l.fixedPay||0;
     el.innerHTML=
-      '<div style="font-size:13px;font-weight:600;margin-bottom:14px">🏦 Зээл засах</div>'+
-      '<div class="f-row g1"><div class="f-grp"><div class="f-lbl">Нэр</div>'+
-        '<input class="f-in" id="ea-name" value="'+l.name.replace(/"/g,"&quot;")+'"></div></div>'+
+      '<div style="font-size:13px;font-weight:600;margin-bottom:10px">🏦 Зээл засах</div>'+
+      '<div class="info-box am">Одоогийн үлдэгдэл: <strong>'+fmt(lb)+'</strong> · Нийт зээлсэн: <strong>'+fmt(l.principal)+'</strong></div>'+
+      bankSelectHtml('Банк','ea-bank','Хуваарьт төлөлтийн өдөр','ea-accno','15')+
+      '<div class="f-grp"><div class="f-lbl">Зээлийн нэр *</div>'+
+        '<input class="f-in" id="ea-name" value="'+l.name.replace(/"/g,'&quot;')+'"></div>'+
+      // Зээлийн үлдэгдэл шинэчлэх
+      '<div class="f-grp"><div class="f-lbl" style="color:var(--am)">Зээлийн үлдэгдэл шинэчлэх</div>'+
+        '<input class="f-in" id="ea-balance" type="text" inputmode="numeric" oninput="fmtI(this)" value="'+lb.toLocaleString()+'">'+
+        '<div style="font-size:10px;color:var(--tx3);margin-top:2px">Тооцоолсон үлдэгдэл: <strong>'+fmt(lb)+'</strong></div></div>'+
+      '<div class="f-grp"><div class="f-lbl" style="color:var(--am)">Нийт зээлсэн дүн</div>'+
+        '<input class="f-in" id="ea-principal" type="text" inputmode="numeric" oninput="fmtI(this)" value="'+l.principal.toLocaleString()+'">'+
+        '</div>'+
       '<div class="f-row g2">'+
         '<div class="f-grp"><div class="f-lbl">Сарын хүү %</div>'+
           '<input class="f-in" id="ea-rate" type="number" step="0.01" min="0" value="'+(l.rate||0)+'"></div>'+
         '<div class="f-grp"><div class="f-lbl">Хугацаа (сар)</div>'+
           '<input class="f-in" id="ea-months" type="number" min="0" value="'+(l.months||0)+'"></div>'+
       '</div>'+
-      // Төлөлтийн тохиргоо
-      '<div style="border-top:1px solid var(--bd);margin:4px 0 8px;padding-top:10px">'+
-      '<div style="font-size:11px;font-weight:700;color:var(--tx3);margin-bottom:8px">📅 Төлөлтийн тохиргоо</div>'+
       '<div class="f-row g2">'+
-        '<div class="f-grp"><div class="f-lbl">Давтамж</div>'+
-          '<select class="f-in" id="ea-payfreq" onchange="eaPayFreqChange()">'+
-            '<option value="monthly"'+((_lf==='monthly')?' selected':'')+'>Сар бүр (нэг удаа)</option>'+
-            '<option value="bimonthly"'+((_lf==='bimonthly')?' selected':'')+'>Сард 2 удаа</option>'+
-          '</select></div>'+
-        '<div class="f-grp"><div class="f-lbl">1-р төлөх өдөр</div>'+
-          '<input class="f-in" id="ea-payday" type="text" value="'+_ld1+'"></div>'+
+        '<div class="f-grp"><div class="f-lbl">Зээл авсан огноо</div>'+
+          '<input class="f-in" id="ea-startdate" type="date" value="'+(l.createdAt||'')+'"></div>'+
+        '<div class="f-grp"><div class="f-lbl">Зээл дуусах огноо</div>'+
+          '<input class="f-in" id="ea-enddate" type="date" value="'+(l.endDate||'')+'"></div>'+
       '</div>'+
-      '<div class="f-grp" id="ea-payday2-wrap" style="display:'+((_lf==='bimonthly')?'block':'none')+'">'+
-        '<div class="f-lbl">2-р төлөх өдөр</div>'+
-        '<input class="f-in" id="ea-payday2" type="text" value="'+_ld2+'"></div>'+
-      ''+
-      '</div>'+
-      '<div style="background:var(--am-bg);border:1px solid var(--am-bd);border-radius:var(--r);padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--am)">'+
-        'Нийт зээлсэн: <strong>'+fmt(l.principal)+'</strong> · Үлдэгдэл өр: <strong>'+fmt(lb)+'</strong></div>'+
       '<div class="m-acts">'+
         '<button class="btn-sec" onclick="renderMgr()">Болих</button>'+
-        '<button class="btn-pri" data-id="'+id+'" onclick="saveEditLoan(this.dataset.id)">Хадгалах</button>'+
+        '<button class="btn-pri" data-id="'+id+'" onclick="saveEditLoan(this.dataset.id)">💾 Хадгалах</button>'+
       '</div>';
+    setTimeout(()=>{
+      const bEl=document.getElementById('ea-bank');
+      const aEl=document.getElementById('ea-accno');
+      if(bEl&&l.bank)bEl.value=l.bank;
+      if(aEl)aEl.value=l.accno||'';
+    },50);
   }
 }
+
 function saveEditSav(id){
   const sv=ACCS.savings.find(s=>s.id===id);if(!sv)return;
   const n=document.getElementById('ea-name').value.trim();
@@ -7349,7 +7359,32 @@ function saveEditSav(id){
   sv.rate=parseFloat(document.getElementById('ea-rate').value)||0;
   sv.months=parseInt(document.getElementById('ea-months').value)||0;
   sv.goal=pAmt(document.getElementById('ea-goal').value)||0;
-  sA(CU.username,ACCS);renderMgr();renderAll();toast('Хадгаламж шинэчлэгдлээ');
+  const bEl=document.getElementById('ea-bank');
+  const aEl=document.getElementById('ea-accno');
+  const dEl=document.getElementById('ea-date');
+  const edEl=document.getElementById('ea-enddate');
+  if(bEl)sv.bank=bEl.value||sv.bank||'';
+  if(aEl)sv.accno=aEl.value||sv.accno||'';
+  if(dEl&&dEl.value)sv.createdAt=dEl.value;
+  if(edEl&&edEl.value)sv.endDate=edEl.value;
+  // Одоогийн үлдэгдэл шинэчлэх
+  const sbEl=document.getElementById('ea-sav-bal');
+  const newSb=sbEl?pAmt(sbEl.value):0;
+  if(newSb>=0&&sbEl&&sbEl.value.trim()!==''){
+    const bal=calcBal();const curSb=bal.savings[id]||0;
+    const diff=newSb-curSb;
+    if(Math.abs(diff)>0){
+      if(diff>0){
+        TXN.unshift({id:uid(),type:'saving_in',amt:diff,savingId:id,isExisting:true,
+          date:nowDate(),datetime:nowDateTime(),desc:sv.name+' үлдэгдэл тохируулга',account:'card'});
+      } else {
+        TXN.unshift({id:uid(),type:'saving_out',amt:Math.abs(diff),savingId:id,
+          date:nowDate(),datetime:nowDateTime(),desc:sv.name+' үлдэгдэл залруулга',account:'card'});
+      }
+      sT(CU.username,TXN);
+    }
+  }
+  sA(CU.username,ACCS);renderMgr();renderAll();toast('✅ Хадгаламж шинэчлэгдлээ');
 }
 function eaPayFreqChange(){
   const f=document.getElementById('ea-payfreq');
@@ -7362,13 +7397,44 @@ function saveEditLoan(id){
   if(n)l.name=n;
   l.rate=parseFloat(document.getElementById('ea-rate').value)||0;
   l.months=parseInt(document.getElementById('ea-months').value)||0;
-  const pf=document.getElementById('ea-payfreq');
-  const pd=document.getElementById('ea-payday');
-  const pd2=document.getElementById('ea-payday2');
-  if(pf)l.payFreq=pf.value;
-  if(pd)l.payDay=parseInt(pd.value)||25;
-  if(pd2&&pf&&pf.value==='bimonthly')l.payDay2=parseInt(pd2.value)||30;
   l.fixedPay=0;
+  // Нэмэлт талбарууд
+  const bEl=document.getElementById('ea-bank');
+  const aEl=document.getElementById('ea-accno');
+  const sdEl=document.getElementById('ea-startdate');
+  const edEl=document.getElementById('ea-enddate');
+  if(bEl)l.bank=bEl.value||l.bank;
+  if(aEl)l.accno=aEl.value||l.accno;
+  if(sdEl&&sdEl.value)l.createdAt=sdEl.value;
+  if(edEl&&edEl.value)l.endDate=edEl.value;
+  // Зээлийн үлдэгдэл шинэчлэх
+  const balEl=document.getElementById('ea-balance');
+  const newBal=balEl?pAmt(balEl.value):0;
+  if(newBal>0){
+    // Шинэ баланс = одоогийн баланс + (newBal - currentBal)
+    const bal=calcBal();const lb=bal.loans[id]||0;
+    const diff=newBal-lb;
+    if(Math.abs(diff)>0){
+      // Баланс тохируулах тусгай TXN
+      const adjId=uid();
+      if(diff>0){
+        // Баланс нэмэгдсэн (нэмэгдсэн хүү гэх мэт)
+        TXN.unshift({id:adjId,type:'loan_take',amt:diff,loanId:id,isExisting:true,
+          date:nowDate(),datetime:nowDateTime(),desc:l.name+' үлдэгдэл тохируулга'});
+      } else {
+        // Баланс буурсан (залруулга)
+        TXN.unshift({id:adjId,type:'loan_pay',amt:Math.abs(diff),loanId:id,
+          fromPrincipal:Math.abs(diff),fromInterest:0,payMode:'manual',
+          date:nowDate(),datetime:nowDateTime(),desc:l.name+' үлдэгдэл залруулга',account:'card',
+          _balAdj:true});
+      }
+      sT(CU.username,TXN);
+    }
+  }
+  // Нийт зээлсэн дүн засах
+  const prEl=document.getElementById('ea-principal');
+  const newPr=prEl?pAmt(prEl.value):0;
+  if(newPr>0)l.principal=newPr;
   sA(CU.username,ACCS);renderMgr();renderAll();toast('✅ Зээл шинэчлэгдлээ');
 }
 
@@ -7599,6 +7665,19 @@ function fillFromRecurring(ri){
 // REFRESH + CHANGELOG
 // ═══════════════════════════════════════════════════
 const CHANGELOG=[
+  {ver:'5.96',date:'2026-06-14',items:[
+    '🗑️ Эргэн төлөлтийн хуваарь, төлөлтийн өдөр бүрэн хасагдлаа',
+    '✏️ Нийт зээлсэн дүн засах боломжтой болсон'
+  ]},
+  {ver:'5.96',date:'2026-06-14',items:[
+    '🗑️ Эргэн төлөлтийн хуваарь бүрэн хасагдлаа',
+    '🗑️ Төлөлтийн өдөр талбар хасагдлаа',
+    '✏️ Нийт зээлсэн дүн засах боломжтой болсон'
+  ]},
+  {ver:'5.95',date:'2026-06-14',items:[
+    '✏️ Зээл засах: банк, огноо, үлдэгдэл шинэчлэх бүх талбар нэмэгдлээ',
+    '✏️ Хадгаламж засах: банк, дансны дугаар, огноо бүх талбар нэмэгдлээ'
+  ]},
   {ver:'5.94',date:'2026-06-14',items:['🧹 Зээлийн картаас Сарын үндсэн/хүү/нийт тооцоолол хасагдлаа']},
   {ver:'5.93',date:'2026-06-14',items:['🔢 Зээл төлөх форм: утга автоматаар бөглөгдөхгүй, placeholder=123']},
   {ver:'5.92',date:'2026-06-14',items:['Bug: netWorth davkhar minus sign zasagdlaa']},
@@ -8334,7 +8413,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   // License event bind
   licBindEvents();
   // App version шалгаж кэш цэвэрлэх
-  const APP_VERSION='v5.94';
+  const APP_VERSION='v5.98';
   const savedVersion=localStorage.getItem('app_version');
   if(savedVersion&&savedVersion!==APP_VERSION){
     // Хуучин version — кэш цэвэрлэж шинэ файл татна
