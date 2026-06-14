@@ -7376,9 +7376,8 @@ function openEditAcc(type,id){
     const _lf=l.payFreq||'monthly';
     el.innerHTML=
       '<div style="font-size:13px;font-weight:600;margin-bottom:10px">🏦 Зээл засах</div>'+
-      '<div class="info-box am" style="display:flex;justify-content:space-between;align-items:center">'+
-        '<span>Одоогийн үлдэгдэл: <strong>'+fmt(lb)+'</strong> · Нийт: <strong>'+fmt(l.principal)+'</strong></span>'+
-        (TXN.some(t=>t.loanId===id&&t._balAdj)?'<button onclick="clearLoanBalAdj(\''+id+'\')" style="font-size:11px;background:var(--rd-bg);color:var(--rd);border:1px solid var(--rd-bd);border-radius:6px;padding:3px 8px;cursor:pointer;font-family:Sora,sans-serif;white-space:nowrap">🗑️ Залруулга цэвэрлэх</button>':'')+
+      '<div class="info-box am">'+
+        'Одоогийн үлдэгдэл: <strong>'+fmt(lb)+'</strong> · Нийт: <strong>'+fmt(l.principal)+'</strong>'+
       '</div>'+
       bankSelectHtml('Банк','ea-bank','Хуваарьт төлөлтийн өдөр','ea-accno','15')+
       '<div class="f-grp"><div class="f-lbl">Зээлийн нэр *</div>'+
