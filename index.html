@@ -2865,7 +2865,15 @@ function renderHero(bal,flow){
   const harEl=document.getElementById('h-har');
   const harSub=document.getElementById('h-har-sub');
   harEl.textContent=fmtH(Math.abs(bal.har));
-  harEl.className='hc-val';
+  harEl.className='hc-val'+(bal.har<0?' neg':'');
+  // Сөрөг байвал tooltip-д засах боломж
+  if(bal.har<0){
+    harEl.title='Засахын тулд: Тохиргоо → 🔍 товч дарна уу';
+    harEl.style.cursor='pointer';
+    harEl.onclick=()=>diagHar();
+  } else {
+    harEl.title='';harEl.style.cursor='';harEl.onclick=null;
+  }
   const cardEl=document.getElementById('h-card');
   const cashEl=document.getElementById('h-cash');
   if(cardEl)cardEl.textContent=fmtH(Math.abs(bal.card||0));
@@ -7772,6 +7780,7 @@ function fillFromRecurring(ri){
 // REFRESH + CHANGELOG
 // ═══════════════════════════════════════════════════
 const CHANGELOG=[
+  {ver:'5.107',date:'2026-06-14',items:['🏠 Нүүрт харилцах алдаа байвал мэдэгдэл+засах товч']},
   {ver:'5.105',date:'2026-06-14',items:[
     '✅ Залруулга бичилт: app нээхэд автоматаар _balAdj=true тохируулна'
   ]},
