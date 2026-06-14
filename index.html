@@ -7317,7 +7317,10 @@ function openEditAcc(type,id){
     const _lf=l.payFreq||'monthly';
     el.innerHTML=
       '<div style="font-size:13px;font-weight:600;margin-bottom:10px">🏦 Зээл засах</div>'+
-      '<div class="info-box am">Одоогийн үлдэгдэл: <strong>'+fmt(lb)+'</strong> · Нийт зээлсэн: <strong>'+fmt(l.principal)+'</strong></div>'+
+      '<div class="info-box am" style="display:flex;justify-content:space-between;align-items:center">'+
+        '<span>Одоогийн үлдэгдэл: <strong>'+fmt(lb)+'</strong> · Нийт: <strong>'+fmt(l.principal)+'</strong></span>'+
+        (TXN.some(t=>t.loanId===id&&t._balAdj)?'<button onclick="clearLoanBalAdj(\''+id+'\')" style="font-size:11px;background:var(--rd-bg);color:var(--rd);border:1px solid var(--rd-bd);border-radius:6px;padding:3px 8px;cursor:pointer;font-family:Sora,sans-serif;white-space:nowrap">🗑️ Залруулга цэвэрлэх</button>':'')+
+      '</div>'+
       bankSelectHtml('Банк','ea-bank','Хуваарьт төлөлтийн өдөр','ea-accno','15')+
       '<div class="f-grp"><div class="f-lbl">Зээлийн нэр *</div>'+
         '<input class="f-in" id="ea-name" value="'+l.name.replace(/"/g,'&quot;')+'"></div>'+
@@ -7353,6 +7356,35 @@ function openEditAcc(type,id){
   }
 }
 
+function clearLoanBalAdj(id){
+  const l=ACCS.loans.find(x=>x.id===id);
+  const name=l?l.name:'Зээл';
+  const before=TXN.length;
+  TXN=TXN.filter(t=>!(t.loanId===id&&t._balAdj));
+  const removed=before-TXN.length;
+  if(removed>0){
+    sT(CU.username,TXN);
+    if(initFB())fbDb.ref(VER+'/'+CU.username+'/txn').set(TXN);
+    renderAll();
+    toast('🗑️ '+name+': '+removed+' залруулга бичилт устгагдлаа');
+    openEditAcc('loan',id); // Refresh edit form
+  } else {
+    toast('ℹ️ Залруулга бичилт байхгүй');
+  }
+}
+function clearAllBalAdj(){
+  const before=TXN.length;
+  TXN=TXN.filter(t=>!t._balAdj);
+  const removed=before-TXN.length;
+  if(removed>0){
+    sT(CU.username,TXN);
+    if(initFB())fbDb.ref(VER+'/'+CU.username+'/txn').set(TXN);
+    renderAll();
+    toast('✅ Нийт '+removed+' залруулга бичилт устгагдлаа');
+  } else {
+    toast('ℹ️ Залруулга бичилт байхгүй байна');
+  }
+}
 function saveEditSav(id){
   const sv=ACCS.savings.find(s=>s.id===id);if(!sv)return;
   // 1. ЭХЛЭЭД бүгдийг DOM-оос уших
@@ -7374,20 +7406,22 @@ function saveEditSav(id){
   if(_accno)sv.accno=_accno;
   if(_date)sv.createdAt=_date;
   if(_edate)sv.endDate=_edate;
-  // 3. Үлдэгдэл тохируулга TXN
+  // 3. Хуучин залруулга бичилтийг АВТОМАТААР устгах
+  TXN=TXN.filter(t=>!(t.savingId===id&&t._balAdj));
+  // 4. Шинэ балансаар залруулга TXN үүсгэх
   if(_sbVal!==''){
     const _curSb=calcBal().savings[id]||0;
     const _diff=_newSb-_curSb;
     if(Math.abs(_diff)>1){
       if(_diff>0){
-        TXN.unshift({id:uid(),type:'saving_in',amt:_diff,savingId:id,isExisting:true,
+        TXN.unshift({id:uid(),type:'saving_in',amt:_diff,savingId:id,isExisting:true,_balAdj:true,
           date:nowDate(),datetime:nowDateTime(),desc:sv.name+' үлдэгдэл тохируулга',account:'card'});
       } else {
-        TXN.unshift({id:uid(),type:'saving_out',amt:Math.abs(_diff),savingId:id,
-          date:nowDate(),datetime:nowDateTime(),desc:sv.name+' үлдэгдэл залруулга',account:'card'});
+        TXN.unshift({id:uid(),type:'saving_out',amt:Math.abs(_diff),savingId:id,_balAdj:true,
+          date:nowDate(),datetime:nowDateTime(),desc:sv.name+' үлдэгдэл тохируулга',account:'card'});
       }
-      sT(CU.username,TXN);
     }
+    sT(CU.username,TXN);
   }
   // DOM-г эхлээд уншсан тул энд зөвхөн хадгалж хаана
   sA(CU.username,ACCS);
@@ -7422,22 +7456,23 @@ function saveEditLoan(id){
   if(_sd)l.createdAt=_sd;
   if(_ed)l.endDate=_ed;
   if(_newPr>0)l.principal=_newPr;
-  // 3. Үлдэгдэл тохируулга TXN
+  // 3. Хуучин залруулга бичилтийг АВТОМАТААР устгах (хэдэн удаа засвар хийсэн ч нэг л зөв бичилт үлдэнэ)
+  TXN=TXN.filter(t=>!(t.loanId===id&&t._balAdj));
+  // 4. Шинэ балансаар залруулга TXN үүсгэх
   if(_newBal>0){
-    const _curLb=calcBal().loans[id]||0;
+    const _curLb=calcBal().loans[id]||0; // Залруулгагүй цэвэр баланс
     const _diff=_newBal-_curLb;
     if(Math.abs(_diff)>1){
       if(_diff>0){
-        TXN.unshift({id:uid(),type:'loan_take',amt:_diff,loanId:id,isExisting:true,
+        TXN.unshift({id:uid(),type:'loan_take',amt:_diff,loanId:id,isExisting:true,_balAdj:true,
           date:nowDate(),datetime:nowDateTime(),desc:l.name+' үлдэгдэл тохируулга'});
       } else {
         TXN.unshift({id:uid(),type:'loan_pay',amt:Math.abs(_diff),loanId:id,
-          fromPrincipal:Math.abs(_diff),fromInterest:0,payMode:'manual',
-          date:nowDate(),datetime:nowDateTime(),desc:l.name+' үлдэгдэл залруулга',
-          account:'card',_balAdj:true});
+          fromPrincipal:Math.abs(_diff),fromInterest:0,payMode:'manual',_balAdj:true,
+          date:nowDate(),datetime:nowDateTime(),desc:l.name+' үлдэгдэл тохируулга',account:'card'});
       }
-      sT(CU.username,TXN);
     }
+    sT(CU.username,TXN); // Үргэлж хадгалах (устгасан ч, нэмсэн ч)
   }
   // 4. Хадгалж хаах
   sA(CU.username,ACCS);
@@ -7673,6 +7708,13 @@ function fillFromRecurring(ri){
 // REFRESH + CHANGELOG
 // ═══════════════════════════════════════════════════
 const CHANGELOG=[
+  {ver:'5.103',date:'2026-06-14',items:[
+    '✅ Засах үйлдэлд хуучин залруулга автоматаар устаж, зөв дүнгээр шинэчлэгдэнэ'
+  ]},
+  {ver:'5.102',date:'2026-06-14',items:[
+    '🗑️ Залруулга бичилт цэвэрлэх: clearLoanBalAdj + clearAllBalAdj',
+    '⚠️ Тохиргоод залруулга бичилт мэдэгдэл харагдана'
+  ]},
   {ver:'5.101',date:'2026-06-14',items:[
     '🐛 Locale format bug: toLocaleString цэгтэй дүнг pAmt буруу уншдаг байсан',
     '✅ safeAmt() функц нэмэгдлээ — бүх locale-д зөв ажиллана'
