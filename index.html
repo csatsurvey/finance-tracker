@@ -1666,10 +1666,19 @@ function fbStartSync(u){
   // TXN sync
   if(!_syncListener){
     _syncListener=fbDb.ref(VER+'/'+u+'/txn').on('value',snap=>{
-      // Бид сая хадгалсан бол 2 секундын хугацаанд listener-г дарна
-      if(window._justSavedTxn&&Date.now()-window._justSavedTxn<2000)return;
       const fbTxn=snap.val();
       if(!fbTxn)return;
+      // Анхны load (TXN хоосон) үед ЗААВАЛ ачааллах
+      const localEmpty=!TXN||TXN.length===0;
+      if(localEmpty){
+        localStorage.setItem(TK(u),JSON.stringify(fbTxn));
+        TXN=fbTxn;
+        window._balAdjFixed=false;
+        renderAll();
+        return;
+      }
+      // Дараагийн sync: бид сая хадгалсан бол дарна
+      if(window._justSavedTxn&&Date.now()-window._justSavedTxn<2000)return;
       const localTxn=gT(u);
       if(JSON.stringify(fbTxn)!==JSON.stringify(localTxn)){
         localStorage.setItem(TK(u),JSON.stringify(fbTxn));
@@ -1682,8 +1691,9 @@ function fbStartSync(u){
   // ACCS sync
   if(!_syncAccsListener){
     _syncAccsListener=fbDb.ref(VER+'/'+u+'/accs').on('value',snap=>{
-      // Бид сая хадгалсан бол 2 секундын хугацаанд listener-г дарна
-      if(window._justSavedAccs&&Date.now()-window._justSavedAccs<2000)return;
+      // Анхны load үед дарахгүй, дараагийн sync-д л дарна
+      const accsEmpty=!ACCS||(!ACCS.loans?.length&&!ACCS.savings?.length);
+      if(!accsEmpty&&window._justSavedAccs&&Date.now()-window._justSavedAccs<2000)return;
       const fbAccs=snap.val();
       if(!fbAccs)return;
       const da=defaultAccounts();
@@ -7516,6 +7526,29 @@ function diagHar(){
   setTimeout(()=>{renderAll();toast('✅ Харилцах '+fmt(card+cash)+' → '+fmt(t2));},300);
 }
 
+function reloadFromFirebase(){
+  if(!initFB()||!CU){toast('Firebase холбоогүй');return;}
+  fbDb.ref(VER+'/'+CU.username+'/txn').once('value',snap=>{
+    const fbTxn=snap.val();
+    if(fbTxn&&fbTxn.length>0){
+      localStorage.setItem(TK(CU.username),JSON.stringify(fbTxn));
+      TXN=fbTxn;
+      window._balAdjFixed=false;
+      window._justSavedTxn=0;
+      renderAll();
+      toast('✅ Firebase-с '+fbTxn.length+' бичилт ачааллав');
+    } else {
+      toast('⚠️ Firebase дахь бичилт хоосон байна');
+    }
+  });
+  fbDb.ref(VER+'/'+CU.username+'/accs').once('value',snap=>{
+    const fbAccs=snap.val();
+    if(fbAccs){
+      localStorage.setItem(AK(CU.username),JSON.stringify(fbAccs));
+      ACCS=fbAccs;
+    }
+  });
+}
 function clearLoanBalAdj(id){
   const l=ACCS.loans.find(x=>x.id===id);
   const name=l?l.name:'Зээл';
@@ -8684,7 +8717,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   // License event bind
   licBindEvents();
   // App version шалгаж кэш цэвэрлэх
-  const APP_VERSION='v5.112';
+  const APP_VERSION='v5.113';
 console.log('%c Миний Санхүү '+APP_VERSION,'background:#3b82f6;color:#fff;padding:2px 6px;border-radius:4px');
   const savedVersion=localStorage.getItem('app_version');
   if(savedVersion&&savedVersion!==APP_VERSION){
