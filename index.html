@@ -645,7 +645,7 @@ body{background:var(--bg);color:var(--tx);font-family:'Sora',sans-serif;font-siz
 <div class="scr" id="s-app">
  <div class="aw">
   <div class="topbar">
-    <div class="topbar-logo">Миний <em>Санхүү</em></div>
+    <div class="topbar-logo">Миний <em>Санхүү</em> <span id="app-ver-show" style="font-size:9px;opacity:.4;font-weight:400"></span></div>
     <div class="topbar-r">
       <div class="chip" id="app-uname"></div>
     </div>
@@ -2804,6 +2804,8 @@ function renderHeroDetails(bal){
 }
 
 function renderAll(){
+  const vEl=document.getElementById('app-ver-show');
+  if(vEl)vEl.textContent=APP_VERSION;
   invalidateFilterCache();
   const bal=calcBal();
   const flow=calcFlow();
@@ -7472,6 +7474,12 @@ function fillFromRecurring(ri){
 // REFRESH + CHANGELOG
 // ═══════════════════════════════════════════════════
 const CHANGELOG=[
+  {ver:'5.118',date:'2026-06-15',items:[
+    '🔧 Firebase sync race condition засагдлаа',
+    '🔍 Харилцах үлдэгдэл засах товч (Тохиргоо)',
+    '🙈 Дотоод залруулга бичилтүүд жагсаалтад харагдахгүй болсон',
+    '🔄 SW auto-update: шинэ хувилбар автоматаар ачааллана'
+  ]},
   {ver:'5.68',date:'2026-06-15',items:[
     '🔒 Зээл төлөлт: баталгаажуулах confirm dialog',
     '⛔ Үлдэгдэл шалгалт: 0 үлдэгдэлтэй бол хориглоно',
