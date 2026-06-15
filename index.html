@@ -1569,12 +1569,12 @@ const sU=async v=>{
 const gT=u=>JSON.parse(localStorage.getItem(TK(u))||'[]');
 const sT=(u,v)=>{
   localStorage.setItem(TK(u),JSON.stringify(v));
-  if(initFB()){window._justSavedTxn=Date.now();fbDb.ref(VER+'/'+u+'/txn').set(v);}
+  if(initFB())fbDb.ref(VER+'/'+u+'/txn').set(v);
 };
 const gA=u=>JSON.parse(localStorage.getItem(AK(u))||'null');
 const sA=(u,v)=>{
   localStorage.setItem(AK(u),JSON.stringify(v));
-  if(initFB()){window._justSavedAccs=Date.now();fbDb.ref(VER+'/'+u+'/accs').set(v);}
+  if(initFB())fbDb.ref(VER+'/'+u+'/accs').set(v);
 };
 const gC=u=>{
   const d=JSON.parse(localStorage.getItem(CK(u))||'null');
@@ -1657,7 +1657,6 @@ function fbStartSync(u){
   // TXN sync
   if(!_syncListener){
     _syncListener=fbDb.ref(VER+'/'+u+'/txn').on('value',snap=>{
-      if(window._justSavedTxn&&Date.now()-window._justSavedTxn<2000)return;
       const fbTxn=snap.val();
       if(!fbTxn)return;
       const localTxn=gT(u);
@@ -1672,7 +1671,6 @@ function fbStartSync(u){
   // ACCS sync
   if(!_syncAccsListener){
     _syncAccsListener=fbDb.ref(VER+'/'+u+'/accs').on('value',snap=>{
-      if(window._justSavedAccs&&Date.now()-window._justSavedAccs<2000)return;
       const fbAccs=snap.val();
       if(!fbAccs)return;
       const da=defaultAccounts();
@@ -3439,25 +3437,6 @@ function calcSavingInterest(svId){
   toast(sv.name+': '+fmt(interest)+' хүү нэмэгдлээ');
 }
 
-function diagHar(){
-  if(!CU)return;
-  const bal=calcBal();
-  const har=bal.har;
-  const raw=prompt('Харилцах одоо: '+fmt(har)+'\n\nЗөв дүн оруулна уу:','');
-  if(!raw||!raw.trim())return;
-  const t2=parseInt(raw.replace(/\D/g,''))||0;
-  if(!t2||Math.abs(t2-har)<1){toast('Өөрчлөлт байхгүй');return;}
-  const d=t2-har;
-  const adj=d>0
-    ?{id:uid(),type:'opening_balance',amt:d,subType:'card',
-      date:nowDate(),datetime:nowDateTime(),desc:'Харилцах залруулга'}
-    :{id:uid(),type:'expense',amt:-d,account:'card',cat:'Залруулга',
-      date:nowDate(),datetime:nowDateTime(),desc:'Харилцах залруулга'};
-  TXN.unshift(adj);
-  sT(CU.username,TXN);
-  if(initFB())fbDb.ref(VER+'/'+CU.username+'/txn').set(TXN);
-  setTimeout(()=>{renderAll();toast('✅ Харилцах '+fmt(har)+' → '+fmt(t2));},300);
-}
 function calcLoanInterest(loanId){
   const l=ACCS.loans.find(x=>x.id===loanId);
   if(!l||!l.rate){toast('Хүү тохируулагдаагүй байна');return;}
@@ -8120,7 +8099,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   // License event bind
   licBindEvents();
   // App version шалгаж кэш цэвэрлэх
-  const APP_VERSION='v5.116';
+  const APP_VERSION='v5.68';
   const savedVersion=localStorage.getItem('app_version');
   if(savedVersion&&savedVersion!==APP_VERSION){
     // Хуучин version — кэш цэвэрлэж шинэ файл татна
