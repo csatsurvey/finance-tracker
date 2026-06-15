@@ -6877,6 +6877,9 @@ function renderMgrHome(){
   const btnStyle='display:flex;flex-direction:column;align-items:flex-start;padding:14px;border:1.5px solid var(--bd);border-radius:12px;background:var(--sur);cursor:pointer;text-align:left;font-family:Sora,sans-serif;transition:.15s;';
   const mo='onmouseover="this.style.borderColor=\'var(--bl)\'" onmouseout="this.style.borderColor=\'var(--bd)\'"';
   el.innerHTML=
+    '<div style="margin-bottom:12px">'+
+    '<button onclick="diagHar()" style="background:var(--am-bg);color:var(--am);border:1.5px solid var(--am-bd);border-radius:10px;padding:11px 16px;font-family:Sora,sans-serif;font-size:13px;font-weight:600;cursor:pointer;width:100%">🔍 Харилцах үлдэгдэл засах</button>'+
+    '</div>'+
     '<div style="font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Тусгай бичилт</div>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">'+
       txnBtns.map(b=>
