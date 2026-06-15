@@ -1,7 +1,7 @@
-// Миний Санхүү — Service Worker v111
+// Миний Санхүү — Service Worker v117
 // Авто шинэчлэлт: шинэ хувилбар гарахад хуудас автоматаар дахин ачааллана
 
-const SW_VERSION = 'v111';
+const SW_VERSION = 'v117';
 
 self.addEventListener('install', e => {
   self.skipWaiting(); // Шинэ SW шууд идэвхжинэ
