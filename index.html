@@ -3897,6 +3897,8 @@ function setTxnShowAll(v){txnShowAll=v;renderList();}
 function renderList(){
   const el=document.getElementById('txn-list');
   const f=filteredTXN().filter(t=>{
+    // Дотоод тохируулга бичилтийг жагсаалтаас хасах
+    if(t._balAdj)return false;
     if(curTab==='all')return true;
     if(curTab==='income')return t.type==='income'||t.type==='saving_interest'||t.type==='opening_balance';
     if(curTab==='expense')return t.type==='expense'||t.type==='loan_pay'||t.type==='loan_interest'||t.type==='saving_in';
@@ -8122,7 +8124,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   // License event bind
   licBindEvents();
   // App version шалгаж кэш цэвэрлэх
-  const APP_VERSION='v5.117';
+  const APP_VERSION='v5.118';
   const savedVersion=localStorage.getItem('app_version');
   if(savedVersion&&savedVersion!==APP_VERSION){
     // Хуучин version — кэш цэвэрлэж шинэ файл татна
